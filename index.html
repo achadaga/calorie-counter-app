@@ -60,35 +60,7 @@
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
 
-    <!-- Settings/Onboarding Modal -->
-    <div id="settings-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
-            <h2 id="settings-title" class="text-3xl font-bold text-center text-gray-900 dark:text-white">Welcome!</h2>
-            <p id="settings-subtitle" class="text-center text-gray-600 dark:text-gray-400">Let's set up your profile to get started.</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label for="userNameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</label>
-                    <input type="text" id="userNameInput" placeholder="e.g., Rohan" class="mt-1 w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label for="startWeightInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Starting Weight (kg)</label>
-                    <input type="number" id="startWeightInput" step="0.1" placeholder="e.g., 87.5" class="mt-1 w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label for="goalWeightInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Goal Weight (kg)</label>
-                    <input type="number" id="goalWeightInput" step="0.1" placeholder="e.g., 76" class="mt-1 w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
-                </div>
-            </div>
-
-            <button id="save-settings-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg">Save and Start</button>
-            <button id="recalculate-target-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg mt-2 hidden">Recalculate Target</button>
-            <button id="close-settings-btn" class="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:underline mt-2 hidden">Close</button>
-        </div>
-    </div>
-
-
-    <div id="main-container" class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8 hidden">
+    <div id="main-container" class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
         
         <!-- Header with Theme Toggle -->
         <header class="text-center mb-8 relative">
@@ -98,9 +70,6 @@
                 <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
                     <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                </button>
-                 <button id="open-settings-btn" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </button>
             </div>
         </header>
@@ -138,7 +107,7 @@
                 </div>
                 <ul id="dailyLog" class="space-y-3"></ul>
                 <div id="empty-log-message" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <p>Set up your profile to start logging!</p>
+                    <p>Log your first meal to get started!</p>
                 </div>
                 <div class="total-calories mt-6 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-2">
@@ -203,7 +172,7 @@
         
         <!-- User ID Display -->
         <div class="text-center mt-4">
-            <p class="text-xs text-gray-500 dark:text-gray-500">User ID: <span id="userIdDisplay">Not signed in</span></p>
+            <p class="text-xs text-gray-500 dark:text-gray-500">Session ID: <span id="userIdDisplay">Not signed in</span></p>
         </div>
 
     </div>
@@ -233,12 +202,15 @@
             themeToggleButton, lightIcon, darkIcon, historyBtns, calorieChartLoader,
             calorieChartContainer, aiResponseEl, getAiTipBtn, aiLoader, weightInput,
             logWeightBtn, currentWeightDisplay, goalWeightDisplay, goalDateDisplay,
-            weightChartLoader, weightChartContainer, settingsModal, settingsTitle,
-            settingsSubtitle, userNameInput, startWeightInput, goalWeightInput,
-            saveSettingsBtn, openSettingsBtn, closeSettingsBtn, recalculateTargetBtn, welcomeMessage;
+            weightChartLoader, weightChartContainer, welcomeMessage;
 
         let currentUserId = null;
-        let userProfile = {};
+        const userProfile = {
+            name: 'User',
+            startWeight: 87.5,
+            goalWeight: 76,
+            calorieTarget: null // This will be calculated by the AI
+        };
         let dailyItems = [];
         let calorieHistoryData = {};
         let weightHistoryData = [];
@@ -278,24 +250,10 @@
             goalDateDisplay = document.getElementById('goal-date-display');
             weightChartLoader = document.getElementById('weight-chart-loader');
             weightChartContainer = document.getElementById('weightChartContainer');
-            settingsModal = document.getElementById('settings-modal');
-            settingsTitle = document.getElementById('settings-title');
-            settingsSubtitle = document.getElementById('settings-subtitle');
-            userNameInput = document.getElementById('userNameInput');
-            startWeightInput = document.getElementById('startWeightInput');
-            goalWeightInput = document.getElementById('goalWeightInput');
-            saveSettingsBtn = document.getElementById('save-settings-btn');
-            openSettingsBtn = document.getElementById('open-settings-btn');
-            closeSettingsBtn = document.getElementById('close-settings-btn');
-            recalculateTargetBtn = document.getElementById('recalculate-target-btn');
             welcomeMessage = document.getElementById('welcome-message');
 
             // Set up event listeners
             themeToggleButton.addEventListener('click', handleThemeToggle);
-            openSettingsBtn.addEventListener('click', handleOpenSettings);
-            closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-            saveSettingsBtn.addEventListener('click', saveUserProfile);
-            recalculateTargetBtn.addEventListener('click', handleRecalculateTarget);
             historyBtns.forEach(btn => {
                 btn.addEventListener('click', () => handleHistoryButtonClick(btn));
             });
@@ -328,21 +286,17 @@
             }
         }
 
-        // --- AUTHENTICATION & USER PROFILE ---
+        // --- AUTHENTICATION & APP INITIALIZATION ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 currentUserId = user.uid;
                 userIdDisplay.textContent = currentUserId;
-                loadUserProfile();
+                initializeAppData();
             } else {
                 currentUserId = null;
                 if (unsubscribeLog) unsubscribeLog();
                 if (unsubscribeWeightHistory) unsubscribeWeightHistory();
                 mainContainer.classList.add('hidden');
-                welcomeMessage.textContent = 'Smart Calorie Counter';
-                emptyLogMessage.textContent = 'Sign in to start tracking!';
-                emptyLogMessage.classList.remove('hidden');
-                dailyLog.innerHTML = '';
             }
         });
 
@@ -358,31 +312,17 @@
             }
         }
         
-        async function loadUserProfile() {
-            if (!currentUserId) return;
-            const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
-            const docSnap = await getDoc(profileRef);
-
-            if (docSnap.exists()) {
-                userProfile = docSnap.data();
-                await initializeAppData();
-                mainContainer.classList.remove('hidden');
-                settingsModal.classList.add('hidden');
-            } else {
-                mainContainer.classList.add('hidden');
-                settingsTitle.textContent = "Welcome!";
-                settingsSubtitle.textContent = "Let's set up your profile to get started.";
-                closeSettingsBtn.classList.add('hidden');
-                recalculateTargetBtn.classList.add('hidden');
-                settingsModal.classList.remove('hidden');
-            }
-        }
-
         async function initializeAppData() {
+            mainContainer.classList.remove('hidden');
             welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
             goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
             
-            if (!userProfile.calorieTarget) {
+            // Fetch the stored calorie target or calculate a new one
+            const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
+            const docSnap = await getDoc(profileRef);
+            if (docSnap.exists() && docSnap.data().calorieTarget) {
+                 userProfile.calorieTarget = docSnap.data().calorieTarget;
+            } else {
                 await calculateAndSaveCalorieTarget();
             }
             calorieTargetSpan.textContent = userProfile.calorieTarget || '...';
@@ -390,53 +330,6 @@
             getTodaysLog();
             listenForWeightHistory();
             fetchCalorieHistory(7);
-        }
-
-        async function saveUserProfile() {
-            const name = userNameInput.value;
-            const startWeight = parseFloat(startWeightInput.value);
-            const goalWeight = parseFloat(goalWeightInput.value);
-
-            if (!name || !startWeight || !goalWeight) {
-                alert("Please fill out all fields.");
-                return;
-            }
-
-            const isNewUser = !userProfile.name;
-            const profileData = { name, startWeight, goalWeight };
-            const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
-            
-            try {
-                await setDoc(profileRef, profileData, { merge: true });
-                userProfile = { ...userProfile, ...profileData };
-                
-                if (isNewUser) {
-                    await calculateAndSaveCalorieTarget();
-                }
-                
-                settingsModal.classList.add('hidden');
-                await initializeAppData();
-                mainContainer.classList.remove('hidden');
-            } catch (error) {
-                console.error("Error saving profile:", error);
-            }
-        }
-
-        function handleOpenSettings() {
-            userNameInput.value = userProfile.name || '';
-            startWeightInput.value = userProfile.startWeight || '';
-            goalWeightInput.value = userProfile.goalWeight || '';
-            settingsTitle.textContent = "Your Profile";
-            settingsSubtitle.textContent = "Update your goals anytime.";
-            closeSettingsBtn.classList.remove('hidden');
-            recalculateTargetBtn.classList.remove('hidden');
-            settingsModal.classList.remove('hidden');
-        }
-
-        async function handleRecalculateTarget() {
-            await saveUserProfile();
-            await calculateAndSaveCalorieTarget();
-            settingsModal.classList.add('hidden');
         }
 
         // --- FIRESTORE DATA HANDLING ---
