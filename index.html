@@ -184,8 +184,8 @@
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. API CONFIGURATION ---
-        const EDAMAM_APP_ID = 'YOUR_EDAMAM_APP_ID';
-        const EDAMAM_APP_KEY = 'YOUR_EDAMAM_APP_KEY';
+        const EDAMAM_APP_ID = 'ede9fe7e';
+        const EDAMAM_APP_KEY = '4c5da630d3f71542b3113c07bd146ed6';
         const GEMINI_API_KEY = ''; 
 
         // --- 2. FIREBASE SETUP ---
@@ -209,7 +209,7 @@
             name: 'User',
             startWeight: 87.5,
             goalWeight: 76,
-            calorieTarget: null // This will be calculated by the AI
+            calorieTarget: 1850 // A default target
         };
         let dailyItems = [];
         let calorieHistoryData = {};
@@ -316,16 +316,7 @@
             mainContainer.classList.remove('hidden');
             welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
             goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
-            
-            // Fetch the stored calorie target or calculate a new one
-            const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
-            const docSnap = await getDoc(profileRef);
-            if (docSnap.exists() && docSnap.data().calorieTarget) {
-                 userProfile.calorieTarget = docSnap.data().calorieTarget;
-            } else {
-                await calculateAndSaveCalorieTarget();
-            }
-            calorieTargetSpan.textContent = userProfile.calorieTarget || '...';
+            calorieTargetSpan.textContent = userProfile.calorieTarget;
 
             getTodaysLog();
             listenForWeightHistory();
