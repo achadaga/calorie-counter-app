@@ -133,12 +133,12 @@
             <!-- Today's Log Section -->
             <div class="log-section">
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Today's Log</h2>
-                <div id="log-loader" class="flex justify-center p-4">
+                <div id="log-loader" class="flex justify-center p-4 hidden">
                     <div class="loader"></div>
                 </div>
                 <ul id="dailyLog" class="space-y-3"></ul>
-                <div id="empty-log-message" class="text-center py-8 text-gray-500 dark:text-gray-400 hidden">
-                    <p>Your log is empty. Search for a food to get started!</p>
+                <div id="empty-log-message" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>Set up your profile to start logging!</p>
                 </div>
                 <div class="total-calories mt-6 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
                     <div class="flex justify-between items-center mb-2">
@@ -307,7 +307,11 @@
             } else {
                 currentUserId = null;
                 if (unsubscribeLog) unsubscribeLog();
-                // Clear UI
+                // Clear UI for signed-out state
+                welcomeMessage.textContent = 'Smart Calorie Counter';
+                emptyLogMessage.textContent = 'Sign in to start tracking!';
+                emptyLogMessage.classList.remove('hidden');
+                dailyLog.innerHTML = '';
             }
         });
 
@@ -331,29 +335,36 @@
             if (docSnap.exists()) {
                 userProfile = docSnap.data();
                 settingsModal.classList.add('hidden');
-                initializeAppData();
-                if (!userProfile.calorieTarget) {
-                    calculateAndSaveCalorieTarget();
-                }
+                await initializeAppData(); // Make this async to wait for target calculation
             } else {
+                // First time user, show onboarding
                 settingsTitle.textContent = "Welcome!";
                 settingsSubtitle.textContent = "Let's set up your profile to get started.";
                 closeSettingsBtn.classList.add('hidden');
                 recalculateTargetBtn.classList.add('hidden');
                 settingsModal.classList.remove('hidden');
+                // Ensure main content loaders are hidden for new users
+                logLoader.classList.add('hidden');
+                weightChartLoader.classList.add('hidden');
+                calorieChartLoader.classList.add('hidden');
             }
         }
 
-        function initializeAppData() {
+        async function initializeAppData() {
             welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
             goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
-            calorieTargetSpan.textContent = userProfile.calorieTarget ? `${userProfile.calorieTarget}` : '...';
+            
+            if (!userProfile.calorieTarget) {
+                await calculateAndSaveCalorieTarget();
+            }
+            calorieTargetSpan.textContent = userProfile.calorieTarget || '...';
+
             getTodaysLog();
             fetchCalorieHistory(7);
             fetchWeightHistory();
         }
 
-        async function saveUserProfile(recalculateTarget = false) {
+        async function saveUserProfile() {
             const name = userNameInput.value;
             const startWeight = parseFloat(startWeightInput.value);
             const goalWeight = parseFloat(goalWeightInput.value);
@@ -363,6 +374,7 @@
                 return;
             }
 
+            const isNewUser = !userProfile.name; // Check if it's the first time saving
             const profileData = { name, startWeight, goalWeight };
             const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
             
@@ -370,12 +382,13 @@
                 await setDoc(profileRef, profileData, { merge: true });
                 userProfile = { ...userProfile, ...profileData };
                 
-                if (recalculateTarget) {
+                // Only calculate target automatically for new users or when explicitly asked
+                if (isNewUser) {
                     await calculateAndSaveCalorieTarget();
                 }
 
                 settingsModal.classList.add('hidden');
-                initializeAppData();
+                await initializeAppData(); // Re-initialize all data after saving
             } catch (error) {
                 console.error("Error saving profile:", error);
             }
@@ -393,9 +406,9 @@
         });
 
         closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-        saveSettingsBtn.addEventListener('click', () => saveUserProfile(true));
+        saveSettingsBtn.addEventListener('click', saveUserProfile);
         recalculateTargetBtn.addEventListener('click', async () => {
-            await saveUserProfile(false); // Save any changes first
+            await saveUserProfile(); // Save any changes first
             await calculateAndSaveCalorieTarget();
             settingsModal.classList.add('hidden');
         });
@@ -406,12 +419,16 @@
         function getTodaysLog() {
             if (!currentUserId) return;
             logLoader.classList.remove('hidden');
+            emptyLogMessage.classList.add('hidden');
             const today = new Date().toISOString().split('T')[0];
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
             unsubscribeLog = onSnapshot(docRef, (docSnap) => {
                 logLoader.classList.add('hidden');
                 dailyItems = docSnap.exists() ? docSnap.data().items || [] : [];
                 renderLog();
+            }, (error) => {
+                console.error("Error fetching today's log:", error);
+                logLoader.classList.add('hidden');
             });
         }
 
@@ -420,7 +437,6 @@
             const today = new Date().toISOString().split('T')[0];
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
             await setDoc(docRef, { items: arrayUnion(foodItem) }, { merge: true });
-            // onSnapshot will trigger renderLog, which calls the goal date calculation
         }
 
         async function removeFoodFromDB(foodItem) {
@@ -520,14 +536,18 @@
                 return;
             }
 
-            const totalDeficitNeeded = weightToLose * 7700; // Approx calories in 1kg of fat
+            const totalDeficitNeeded = weightToLose * 7700;
             
-            const historicalIntake = Object.values(calorieHistoryData);
+            const historicalIntake = Object.values(calorieHistoryData).filter(cals => cals > 0); // Only average non-zero days
+            if (historicalIntake.length < 3) {
+                goalDateDisplay.textContent = "More data needed";
+                return;
+            }
             const averageIntake = historicalIntake.reduce((a, b) => a + b, 0) / historicalIntake.length;
             
             const averageDailyDeficit = userProfile.calorieTarget - averageIntake;
 
-            if (averageDailyDeficit <= 100) { // If deficit is too small or a surplus
+            if (averageDailyDeficit <= 100) {
                 goalDateDisplay.textContent = "Maintain deficit";
                 return;
             }
