@@ -60,7 +60,7 @@
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
 
-    <!-- NEW: Settings/Onboarding Modal -->
+    <!-- Settings/Onboarding Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
             <h2 id="settings-title" class="text-3xl font-bold text-center text-gray-900 dark:text-white">Welcome!</h2>
@@ -82,7 +82,8 @@
             </div>
 
             <button id="save-settings-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg">Save and Start</button>
-            <button id="close-settings-btn" class="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:underline hidden">Close</button>
+            <button id="recalculate-target-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg mt-2 hidden">Recalculate Target</button>
+            <button id="close-settings-btn" class="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:underline mt-2 hidden">Close</button>
         </div>
     </div>
 
@@ -139,24 +140,36 @@
                 <div id="empty-log-message" class="text-center py-8 text-gray-500 dark:text-gray-400 hidden">
                     <p>Your log is empty. Search for a food to get started!</p>
                 </div>
-                <div class="total-calories mt-6 pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                    <span class="text-xl font-semibold text-gray-700 dark:text-gray-300">Total Today:</span>
-                    <span id="totalCalories" class="text-3xl font-bold text-blue-600 dark:text-blue-400">0</span>
-                    <span class="text-xl font-semibold text-gray-700 dark:text-gray-300">calories</span>
+                <div class="total-calories mt-6 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xl font-semibold text-gray-700 dark:text-gray-300">Total / Goal</span>
+                        <div>
+                            <span id="totalCalories" class="text-3xl font-bold text-blue-600 dark:text-blue-400">0</span>
+                            <span class="text-xl text-gray-500 dark:text-gray-400"> / </span>
+                            <span id="calorieTarget" class="text-3xl font-bold text-gray-500 dark:text-gray-400">...</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                        <div id="calorie-progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
                 </div>
             </div>
 
             <!-- Weight Tracking Section -->
             <div class="weight-tracking-section">
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Weight Progress</h2>
-                <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-center mb-4">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Current Weight</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Current</p>
                         <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Goal Weight</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Goal</p>
                         <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="goal-weight-display">-- kg</p>
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Est. Goal Date</p>
+                        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="goal-date-display">...</p>
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -202,8 +215,8 @@
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. API CONFIGURATION ---
-        const EDAMAM_APP_ID = 'ede9fe7e';
-        const EDAMAM_APP_KEY = '4c5da630d3f71542b3113c07bd146ed6';
+        const EDAMAM_APP_ID = 'YOUR_EDAMAM_APP_ID';
+        const EDAMAM_APP_KEY = 'YOUR_EDAMAM_APP_KEY';
         const GEMINI_API_KEY = ''; 
 
         // --- 2. FIREBASE SETUP ---
@@ -220,6 +233,8 @@
         const searchLoader = document.getElementById('search-loader');
         const dailyLog = document.getElementById('dailyLog');
         const totalCaloriesSpan = document.getElementById('totalCalories');
+        const calorieTargetSpan = document.getElementById('calorieTarget');
+        const calorieProgressBar = document.getElementById('calorie-progress-bar');
         const logLoader = document.getElementById('log-loader');
         const emptyLogMessage = document.getElementById('empty-log-message');
         const userIdDisplay = document.getElementById('userIdDisplay');
@@ -236,6 +251,7 @@
         const logWeightBtn = document.getElementById('log-weight-btn');
         const currentWeightDisplay = document.getElementById('current-weight-display');
         const goalWeightDisplay = document.getElementById('goal-weight-display');
+        const goalDateDisplay = document.getElementById('goal-date-display');
         const weightChartLoader = document.getElementById('weight-chart-loader');
         const weightChartContainer = document.getElementById('weightChartContainer');
         const settingsModal = document.getElementById('settings-modal');
@@ -247,6 +263,7 @@
         const saveSettingsBtn = document.getElementById('save-settings-btn');
         const openSettingsBtn = document.getElementById('open-settings-btn');
         const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const recalculateTargetBtn = document.getElementById('recalculate-target-btn');
         const welcomeMessage = document.getElementById('welcome-message');
 
 
@@ -315,11 +332,14 @@
                 userProfile = docSnap.data();
                 settingsModal.classList.add('hidden');
                 initializeAppData();
+                if (!userProfile.calorieTarget) {
+                    calculateAndSaveCalorieTarget();
+                }
             } else {
-                // First time user, show onboarding
                 settingsTitle.textContent = "Welcome!";
                 settingsSubtitle.textContent = "Let's set up your profile to get started.";
                 closeSettingsBtn.classList.add('hidden');
+                recalculateTargetBtn.classList.add('hidden');
                 settingsModal.classList.remove('hidden');
             }
         }
@@ -327,12 +347,13 @@
         function initializeAppData() {
             welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
             goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
+            calorieTargetSpan.textContent = userProfile.calorieTarget ? `${userProfile.calorieTarget}` : '...';
             getTodaysLog();
             fetchCalorieHistory(7);
             fetchWeightHistory();
         }
 
-        async function saveUserProfile() {
+        async function saveUserProfile(recalculateTarget = false) {
             const name = userNameInput.value;
             const startWeight = parseFloat(startWeightInput.value);
             const goalWeight = parseFloat(goalWeightInput.value);
@@ -346,8 +367,13 @@
             const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
             
             try {
-                await setDoc(profileRef, profileData);
-                userProfile = profileData;
+                await setDoc(profileRef, profileData, { merge: true });
+                userProfile = { ...userProfile, ...profileData };
+                
+                if (recalculateTarget) {
+                    await calculateAndSaveCalorieTarget();
+                }
+
                 settingsModal.classList.add('hidden');
                 initializeAppData();
             } catch (error) {
@@ -362,11 +388,17 @@
             settingsTitle.textContent = "Your Profile";
             settingsSubtitle.textContent = "Update your goals anytime.";
             closeSettingsBtn.classList.remove('hidden');
+            recalculateTargetBtn.classList.remove('hidden');
             settingsModal.classList.remove('hidden');
         });
 
         closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-        saveSettingsBtn.addEventListener('click', saveUserProfile);
+        saveSettingsBtn.addEventListener('click', () => saveUserProfile(true));
+        recalculateTargetBtn.addEventListener('click', async () => {
+            await saveUserProfile(false); // Save any changes first
+            await calculateAndSaveCalorieTarget();
+            settingsModal.classList.add('hidden');
+        });
         
         signIn();
 
@@ -388,7 +420,7 @@
             const today = new Date().toISOString().split('T')[0];
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
             await setDoc(docRef, { items: arrayUnion(foodItem) }, { merge: true });
-            fetchCalorieHistory(parseInt(document.querySelector('.history-btn.bg-blue-100, .history-btn.dark\\:bg-blue-900').dataset.days));
+            // onSnapshot will trigger renderLog, which calls the goal date calculation
         }
 
         async function removeFoodFromDB(foodItem) {
@@ -396,7 +428,6 @@
             const today = new Date().toISOString().split('T')[0];
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
             await updateDoc(docRef, { items: arrayRemove(foodItem) });
-            fetchCalorieHistory(parseInt(document.querySelector('.history-btn.bg-blue-100, .history-btn.dark\\:bg-blue-900').dataset.days));
         }
 
         async function logWeightToDB(weight) {
@@ -412,7 +443,7 @@
             }
         }
         
-        // --- HISTORY & CHARTING ---
+        // --- HISTORY & CHARTING (OPTIMIZED) ---
         async function fetchCalorieHistory(days) {
             if (!currentUserId) return;
             calorieChartLoader.classList.remove('hidden');
@@ -438,6 +469,7 @@
                 });
                 calorieHistoryData = data; 
                 renderCalorieHistoryChart(data);
+                calculateAndDisplayGoalDate();
             } finally {
                 calorieChartLoader.classList.add('hidden');
                 calorieChartContainer.classList.remove('hidden');
@@ -450,7 +482,7 @@
             weightChartContainer.classList.add('hidden');
 
             const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`);
-            const q = query(logsRef); // Get all weight logs
+            const q = query(logsRef); 
 
             try {
                 const querySnapshot = await getDocs(q);
@@ -462,84 +494,92 @@
                 
                 if (data.length > 0) {
                     currentWeightDisplay.textContent = `${data[data.length - 1].weight} kg`;
-                } else {
-                    currentWeightDisplay.textContent = `${userProfile.startWeight || '--'} kg`;
+                } else if (userProfile.startWeight) {
+                    currentWeightDisplay.textContent = `${userProfile.startWeight} kg`;
                 }
 
                 renderWeightChart(data);
+                calculateAndDisplayGoalDate();
             } finally {
                 weightChartLoader.classList.add('hidden');
                 weightChartContainer.classList.remove('hidden');
             }
         }
+        
+        function calculateAndDisplayGoalDate() {
+            if (!userProfile.calorieTarget || Object.keys(calorieHistoryData).length < 3) {
+                goalDateDisplay.textContent = "More data needed";
+                return;
+            }
+
+            const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length-1].weight : userProfile.startWeight;
+            const weightToLose = latestWeight - userProfile.goalWeight;
+
+            if (weightToLose <= 0) {
+                goalDateDisplay.textContent = "Goal Reached! 🎉";
+                return;
+            }
+
+            const totalDeficitNeeded = weightToLose * 7700; // Approx calories in 1kg of fat
+            
+            const historicalIntake = Object.values(calorieHistoryData);
+            const averageIntake = historicalIntake.reduce((a, b) => a + b, 0) / historicalIntake.length;
+            
+            const averageDailyDeficit = userProfile.calorieTarget - averageIntake;
+
+            if (averageDailyDeficit <= 100) { // If deficit is too small or a surplus
+                goalDateDisplay.textContent = "Maintain deficit";
+                return;
+            }
+
+            const daysToGoal = Math.round(totalDeficitNeeded / averageDailyDeficit);
+            
+            const goalDate = new Date();
+            goalDate.setDate(goalDate.getDate() + daysToGoal);
+
+            goalDateDisplay.textContent = goalDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
 
         function renderCalorieHistoryChart(data) {
-            const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
-            if (calorieHistoryChart) calorieHistoryChart.destroy();
-            calorieHistoryChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(data).map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
-                    datasets: [{
-                        label: 'Calories',
-                        data: Object.values(data),
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 1, borderRadius: 5,
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
-            });
+            const labels = Object.keys(data).map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const values = Object.values(data);
+
+            if (calorieHistoryChart) {
+                calorieHistoryChart.data.labels = labels;
+                calorieHistoryChart.data.datasets[0].data = values;
+                calorieHistoryChart.update();
+            } else {
+                const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
+                calorieHistoryChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label: 'Calories', data: values, backgroundColor: 'rgba(59, 130, 246, 0.5)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 5 }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+                });
+            }
             updateChartAppearance(calorieHistoryChart);
         }
 
         function renderWeightChart(data) {
-            const ctx = document.getElementById('weightChart').getContext('2d');
-            if (weightHistoryChart) weightHistoryChart.destroy();
-            
             const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
             const values = data.map(d => d.weight);
 
-            weightHistoryChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Weight (kg)',
-                        data: values,
-                        borderColor: 'rgb(22, 163, 74)',
-                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                        fill: true,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: false } },
-                    plugins: { 
-                        legend: { display: false },
-                        annotation: {
-                            annotations: {
-                                goalLine: {
-                                    type: 'line',
-                                    yMin: userProfile.goalWeight,
-                                    yMax: userProfile.goalWeight,
-                                    borderColor: 'rgb(239, 68, 68)',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        content: 'Goal',
-                                        enabled: true,
-                                        position: 'end',
-                                        backgroundColor: 'rgba(239, 68, 68, 0.8)'
-                                    }
-                                }
-                            }
-                        }
+            if (weightHistoryChart) {
+                weightHistoryChart.data.labels = labels;
+                weightHistoryChart.data.datasets[0].data = values;
+                weightHistoryChart.options.plugins.annotation.annotations.goalLine.yMin = userProfile.goalWeight;
+                weightHistoryChart.options.plugins.annotation.annotations.goalLine.yMax = userProfile.goalWeight;
+                weightHistoryChart.update();
+            } else {
+                const ctx = document.getElementById('weightChart').getContext('2d');
+                weightHistoryChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels, datasets: [{ label: 'Weight (kg)', data: values, borderColor: 'rgb(22, 163, 74)', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: true, tension: 0.1 }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } },
+                        plugins: { legend: { display: false }, annotation: { annotations: { goalLine: { type: 'line', yMin: userProfile.goalWeight, yMax: userProfile.goalWeight, borderColor: 'rgb(239, 68, 68)', borderWidth: 2, borderDash: [6, 6], label: { content: 'Goal', enabled: true, position: 'end', backgroundColor: 'rgba(239, 68, 68, 0.8)' } } } } }
                     }
-                }
-            });
+                });
+            }
             updateChartAppearance(weightHistoryChart, true);
         }
         
@@ -574,12 +614,45 @@
 
         logWeightBtn.addEventListener('click', () => {
             const weight = weightInput.value;
-            if (weight) {
-                logWeightToDB(weight);
-            }
+            if (weight) logWeightToDB(weight);
         });
 
         // --- GEMINI AI COACH LOGIC ---
+        async function calculateAndSaveCalorieTarget() {
+            calorieTargetSpan.textContent = '...';
+            const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length-1].weight : userProfile.startWeight;
+            const prompt = `
+                As a nutritionist AI, calculate a daily calorie target for a user with the following details:
+                - Starting Weight: ${userProfile.startWeight} kg
+                - Current Weight: ${latestWeight} kg
+                - Goal Weight: ${userProfile.goalWeight} kg
+                The user wants gradual, sustainable weight loss, not a crash diet.
+                Based on these factors, provide a single, reasonable daily calorie target.
+                IMPORTANT: Respond with ONLY the numerical value for the daily calorie target and nothing else. Example: 1850
+            `;
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const result = await response.json();
+                const target = parseInt(result.candidates[0].content.parts[0].text.trim());
+                
+                if (!isNaN(target)) {
+                    userProfile.calorieTarget = target;
+                    const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
+                    await setDoc(profileRef, { calorieTarget: target }, { merge: true });
+                    calorieTargetSpan.textContent = target;
+                    renderLog();
+                } else {
+                    calorieTargetSpan.textContent = 'Error';
+                }
+            } catch (error) {
+                console.error("Error calculating target:", error);
+                calorieTargetSpan.textContent = 'Error';
+            }
+        }
+
         async function getAICoachTip() {
             if (!userProfile.goalWeight) {
                 aiResponseEl.textContent = "Please set up your profile first to get personalized advice!";
@@ -598,14 +671,14 @@
             const prompt = `
                 You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine for a user named ${userProfile.name}.
                 The user is predominantly vegetarian but also eats eggs, tofu, and shrimp for protein.
-                Their starting weight was ${userProfile.startWeight} kg. Their current weight is ${latestWeight} kg. Their goal weight is ${userProfile.goalWeight} kg.
+                Their starting weight was ${userProfile.startWeight} kg. Their current weight is ${latestWeight} kg. Their goal weight is ${userProfile.goalWeight} kg. Their daily calorie target is ${userProfile.calorieTarget} kcal. The app estimates they will reach their goal on ${goalDateDisplay.textContent}.
                 
                 Here is their data:
                 - Today's calorie log: ${todayItemsString} (Total: ${todayTotal} calories).
                 - Recent calorie history: ${calorieHistoryString}.
                 - Recent weight history: ${weightHistoryString}.
 
-                Based on all this data, provide a short (2-4 sentences), motivational, and practical tip that acknowledges their weight journey.
+                Based on all this data, provide a short (2-4 sentences), motivational, and practical tip that acknowledges their weight journey and the estimated goal date.
                 Your advice should be non-judgmental and MUST focus on one of these topics:
                 1. A low-calorie Indian meal suggestion (e.g., using cauliflower rice, millet/jowar roti).
                 2. A simple, protein-rich shake idea (e.g., with yogurt/tofu and fruit).
@@ -688,6 +761,21 @@
                 total += item.calories;
             });
             totalCaloriesSpan.textContent = total;
+
+            const target = userProfile.calorieTarget || 0;
+            calorieTargetSpan.textContent = target;
+            const percentage = target > 0 ? Math.min((total / target) * 100, 100) : 0;
+            calorieProgressBar.style.width = `${percentage}%`;
+
+            calorieProgressBar.classList.remove('bg-blue-600', 'bg-orange-500', 'bg-red-600');
+            if (total > target) {
+                calorieProgressBar.classList.add('bg-red-600');
+            } else if (percentage > 85) {
+                calorieProgressBar.classList.add('bg-orange-500');
+            } else {
+                calorieProgressBar.classList.add('bg-blue-600');
+            }
+            calculateAndDisplayGoalDate();
         }
 
         searchInput.addEventListener('input', () => {
