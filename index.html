@@ -36,6 +36,16 @@
             border-color: #4a5568; /* dark:border-gray-600 */
             border-top-color: #60a5fa; /* dark:border-blue-400 */
         }
+        .chat-loader {
+             border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            width: 20px;
+            height: 20px;
+        }
+        .dark .chat-loader {
+            border-color: #4a5568;
+            border-top-color: #60a5fa;
+        }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -60,6 +70,41 @@
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
 
+    <!-- AI Chat Modal -->
+    <div id="ai-chat-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center p-4 z-50 hidden">
+        <div class="flex flex-col h-full max-h-[90vh] w-full max-w-2xl bg-white dark:bg-gray-800 shadow-lg rounded-2xl">
+            <!-- Header -->
+            <header class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">AI Nutritionist</h1>
+                <button id="close-chat-btn" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </header>
+
+            <!-- Chat Messages -->
+            <div id="chat-container" class="flex-1 p-6 overflow-y-auto space-y-4">
+                <!-- Initial AI Message -->
+                <div class="flex items-start gap-3">
+                    <div class="bg-blue-500 text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">A</div>
+                    <div class="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
+                        <p>Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <footer class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2">
+                    <input type="text" id="chat-input" placeholder="Ask a question..." class="w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    <button id="chat-send-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    </button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+
     <div id="main-container" class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
         
         <!-- Header with Theme Toggle -->
@@ -67,6 +112,9 @@
             <h1 id="welcome-message" class="text-4xl font-bold text-gray-900 dark:text-white">Smart Calorie Counter</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">Your personal AI-powered nutrition assistant.</p>
             <div class="absolute top-0 right-0 flex items-center space-x-2">
+                <button id="open-chat-btn" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                </button>
                 <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
                     <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
@@ -191,11 +239,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. API CONFIGURATION ---
-        const EDAMAM_APP_ID = 'ede9fe7e';
-        const EDAMAM_APP_KEY = '4c5da630d3f71542b3113c07bd146ed6';
+        const EDAMAM_APP_ID = 'YOUR_EDAMAM_APP_ID';
+        const EDAMAM_APP_KEY = 'YOUR_EDAMAM_APP_KEY';
         const GEMINI_API_KEY = ''; 
 
         // --- 2. FIREBASE SETUP ---
@@ -213,16 +261,17 @@
             calorieChartContainer, aiResponseEl, getAiTipBtn, aiLoader, weightInput,
             logWeightBtn, currentWeightDisplay, goalWeightDisplay, goalDateDisplay,
             weightChartLoader, weightChartContainer, welcomeMessage, manualNameInput,
-            manualCaloriesInput, addManualBtn;
+            manualCaloriesInput, addManualBtn, aiChatModal, openChatBtn, closeChatBtn,
+            chatContainer, chatInput, chatSendBtn;
 
         let currentUserId = null;
         const userProfile = {
             name: 'User',
             startWeight: 87.5,
             goalWeight: 76,
-            calorieTarget: 1850 // A default target
+            calorieTarget: 1850
         };
-        let dailyItems = []; // Reverted to Array
+        let dailyItems = {};
         let calorieHistoryData = {};
         let weightHistoryData = [];
         let searchTimeout;
@@ -230,6 +279,7 @@
         let unsubscribeWeightHistory;
         let calorieHistoryChart = null;
         let weightHistoryChart = null;
+        let healthDataSummary = "No data available yet.";
 
         // --- 4. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -265,6 +315,12 @@
             manualNameInput = document.getElementById('manualNameInput');
             manualCaloriesInput = document.getElementById('manualCaloriesInput');
             addManualBtn = document.getElementById('add-manual-btn');
+            aiChatModal = document.getElementById('ai-chat-modal');
+            openChatBtn = document.getElementById('open-chat-btn');
+            closeChatBtn = document.getElementById('close-chat-btn');
+            chatContainer = document.getElementById('chat-container');
+            chatInput = document.getElementById('chat-input');
+            chatSendBtn = document.getElementById('chat-send-btn');
 
             // Set up event listeners
             themeToggleButton.addEventListener('click', handleThemeToggle);
@@ -272,8 +328,12 @@
             logWeightBtn.addEventListener('click', handleLogWeight);
             getAiTipBtn.addEventListener('click', getAICoachTip);
             searchInput.addEventListener('input', handleSearchInput);
-            dailyLog.addEventListener('click', handleRemoveFood);
+            dailyLog.addEventListener('click', handleLogInteraction);
             addManualBtn.addEventListener('click', handleManualAdd);
+            openChatBtn.addEventListener('click', () => aiChatModal.classList.remove('hidden'));
+            closeChatBtn.addEventListener('click', () => aiChatModal.classList.add('hidden'));
+            chatSendBtn.addEventListener('click', handleChatSend);
+            chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatSend(); });
 
             // Start the authentication process
             signIn();
@@ -303,7 +363,7 @@
         onAuthStateChanged(auth, user => {
             if (user) {
                 currentUserId = user.uid;
-                userIdDisplay.textContent = currentUserId;
+                userIdDisplay.textContent = currentUserId.substring(0, 8) + '...';
                 initializeAppData();
             } else {
                 currentUserId = null;
@@ -345,7 +405,7 @@
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
             unsubscribeLog = onSnapshot(docRef, (docSnap) => {
                 logLoader.classList.add('hidden');
-                dailyItems = docSnap.exists() ? docSnap.data().items || [] : [];
+                dailyItems = docSnap.exists() ? docSnap.data().items || {} : {};
                 renderLog();
             }, (error) => {
                 console.error("Error fetching today's log:", error);
@@ -357,14 +417,32 @@
             if (!currentUserId) return;
             const today = new Date().toISOString().split('T')[0];
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
-            await setDoc(docRef, { items: arrayUnion(foodItem) }, { merge: true });
-        }
+            
+            const foodId = foodItem.name.replace(/[^a-zA-Z0-9]/g, '');
+            const existingItem = dailyItems[foodId];
 
-        async function removeFoodFromDB(foodItem) {
+            const updates = {};
+            if (existingItem) {
+                updates[`items.${foodId}.quantity`] = existingItem.quantity + 1;
+            } else {
+                updates[`items.${foodId}`] = { ...foodItem, quantity: 1 };
+            }
+
+            await setDoc(docRef, updates, { merge: true });
+        }
+        
+        async function updateFoodQuantityInDB(foodId, newQuantity) {
             if (!currentUserId) return;
             const today = new Date().toISOString().split('T')[0];
             const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
-            await updateDoc(docRef, { items: arrayRemove(foodItem) });
+            const updates = {};
+
+            if (newQuantity > 0) {
+                updates[`items.${foodId}.quantity`] = newQuantity;
+            } else {
+                updates[`items.${foodId}`] = deleteField();
+            }
+            await updateDoc(docRef, updates);
         }
 
         async function logWeightToDB(weight) {
@@ -401,8 +479,8 @@
                     data[d.toISOString().split('T')[0]] = 0;
                 }
                 querySnapshot.forEach((doc) => {
-                    const items = doc.data().items || [];
-                    data[doc.id] = items.reduce((sum, item) => sum + item.calories, 0);
+                    const items = doc.data().items || {};
+                    data[doc.id] = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
                 });
                 calorieHistoryData = data; 
                 renderCalorieHistoryChart(data);
@@ -561,16 +639,12 @@
 
         // --- GEMINI AI COACH LOGIC ---
         async function getAICoachTip() {
-            if (!userProfile.goalWeight) {
-                aiResponseEl.textContent = "Please set up your profile first to get personalized advice!";
-                return;
-            }
             aiResponseEl.classList.add('hidden');
             aiLoader.classList.remove('hidden');
             getAiTipBtn.disabled = true;
 
-            const todayTotal = dailyItems.reduce((sum, item) => sum + item.calories, 0);
-            const todayItemsString = dailyItems.map(item => `${item.name} (${item.calories} kcal)`).join(', ') || 'nothing yet';
+            const todayTotal = Object.values(dailyItems).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
+            const todayItemsString = Object.values(dailyItems).map(item => `${item.name} (${item.calories} kcal x ${item.quantity})`).join(', ') || 'nothing yet';
             const calorieHistoryString = Object.entries(calorieHistoryData).map(([date, cals]) => `${new Date(date).toLocaleDateString()}: ${cals} kcal`).join('; ');
             const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length-1].weight : userProfile.startWeight;
             const weightHistoryString = weightHistoryData.map(d => `${new Date(d.date).toLocaleDateString()}: ${d.weight} kg`).join('; ') || 'No weight logged yet.';
@@ -656,7 +730,7 @@
                 resultDiv.className = 'p-4 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center border-t border-gray-100 dark:border-gray-700';
                 resultDiv.innerHTML = `<div><p class="font-semibold text-gray-800 dark:text-gray-200">${foodName}</p><p class="text-sm text-gray-500 dark:text-gray-400">${calories} calories</p></div><button class="text-blue-600 dark:text-blue-400 font-bold text-2xl">+</button>`;
                 resultDiv.addEventListener('click', () => {
-                    addFoodToDB({ id: `food_${Date.now()}_${Math.random()}`, name: foodName, calories: calories });
+                    addFoodToDB({ name: foodName, calories: calories });
                     searchInput.value = '';
                     searchResults.innerHTML = '';
                 });
@@ -667,13 +741,26 @@
         function renderLog() {
             dailyLog.innerHTML = '';
             let total = 0;
-            emptyLogMessage.classList.toggle('hidden', dailyItems.length > 0);
-            dailyItems.forEach(item => {
+            const items = Object.entries(dailyItems);
+            emptyLogMessage.classList.toggle('hidden', items.length > 0);
+            
+            items.forEach(([foodId, item]) => {
                 const listItem = document.createElement('li');
                 listItem.className = 'p-4 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center';
-                listItem.innerHTML = `<div><p class="font-medium text-gray-900 dark:text-gray-100">${item.name}</p><p class="text-sm text-blue-600 dark:text-blue-400 font-semibold">${item.calories} calories</p></div><button data-id="${item.id}" class="remove-btn text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>`;
+                listItem.innerHTML = `
+                    <div>
+                        <p class="font-medium text-gray-900 dark:text-gray-100">${item.name}</p>
+                        <p class="text-sm text-blue-600 dark:text-blue-400 font-semibold">${item.calories} calories each</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button data-id="${foodId}" data-action="decrease" class="quantity-btn text-lg font-bold w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600">-</button>
+                        <span class="font-bold text-lg w-8 text-center">${item.quantity}</span>
+                        <button data-id="${foodId}" data-action="increase" class="quantity-btn text-lg font-bold w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600">+</button>
+                        <button data-id="${foodId}" data-action="remove" class="remove-btn text-red-500 hover:text-red-700 font-bold text-xl ml-2">&times;</button>
+                    </div>
+                `;
                 dailyLog.appendChild(listItem);
-                total += item.calories;
+                total += item.calories * item.quantity;
             });
             totalCaloriesSpan.textContent = total;
 
@@ -693,16 +780,25 @@
             calculateAndDisplayGoalDate();
         }
 
-        function handleRemoveFood(e) {
-            if (e.target.classList.contains('remove-btn')) {
-                const itemId = e.target.dataset.id;
-                const itemToRemove = dailyItems.find(item => item.id === itemId);
-                if (itemToRemove) {
-                    removeFoodFromDB(itemToRemove);
-                }
+        function handleLogInteraction(e) {
+            const target = e.target;
+            const foodId = target.dataset.id;
+            const action = target.dataset.action;
+
+            if (!foodId || !action) return;
+
+            const item = dailyItems[foodId];
+            if (!item) return;
+
+            if (action === 'increase') {
+                updateFoodQuantityInDB(foodId, item.quantity + 1);
+            } else if (action === 'decrease') {
+                updateFoodQuantityInDB(foodId, item.quantity - 1);
+            } else if (action === 'remove') {
+                updateFoodQuantityInDB(foodId, 0); // Setting quantity to 0 removes it
             }
         }
-        
+
         function handleManualAdd() {
             const name = manualNameInput.value || 'Manual Entry';
             const calories = parseInt(manualCaloriesInput.value);
@@ -712,9 +808,124 @@
                 return;
             }
 
-            addFoodToDB({ id: `food_${Date.now()}_${Math.random()}`, name, calories });
+            addFoodToDB({ name, calories });
             manualNameInput.value = '';
             manualCaloriesInput.value = '';
+        }
+        
+        async function handleChatSend() {
+            const userMessage = chatInput.value.trim();
+            if (!userMessage) return;
+
+            appendMessage(userMessage, 'user');
+            chatInput.value = '';
+            chatSendBtn.disabled = true;
+
+            // Show AI typing indicator
+            appendMessage('<div class="loader chat-loader"></div>', 'ai');
+            const aiBubble = chatContainer.querySelector('.ai-message-bubble:last-child');
+
+            await fetchHealthDataSummary();
+
+            const prompt = `
+                You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine.
+                The user is predominantly vegetarian but also eats eggs, tofu, and shrimp for protein.
+                
+                Here is the user's health data summary:
+                ${healthDataSummary}
+
+                The user has asked the following question: "${userMessage}"
+
+                Based on their data and their question, provide a helpful, concise, and supportive answer.
+                Keep your response conversational and focused on their question.
+            `;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                
+                const result = await response.json();
+                const aiResponse = result.candidates[0].content.parts[0].text;
+                aiBubble.innerHTML = `<p>${aiResponse}</p>`; // Replace loader with response
+            } catch (error) {
+                console.error("Gemini API error:", error);
+                aiBubble.innerHTML = `<p>Sorry, I'm having trouble connecting right now. Please try again in a moment.</p>`;
+            } finally {
+                chatSendBtn.disabled = false;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function appendMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            if (sender === 'user') {
+                messageDiv.className = 'flex items-start gap-3 justify-end';
+                messageDiv.innerHTML = `
+                    <div class="bg-blue-600 text-white p-4 rounded-lg rounded-br-none max-w-xs md:max-w-md">
+                        <p>${message}</p>
+                    </div>
+                    <div class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">U</div>
+                `;
+            } else { // AI
+                messageDiv.className = 'flex items-start gap-3';
+                messageDiv.innerHTML = `
+                    <div class="bg-blue-500 text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">A</div>
+                    <div class="ai-message-bubble bg-gray-200 dark:bg-gray-700 p-4 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
+                        ${message}
+                    </div>
+                `;
+            }
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function fetchHealthDataSummary() {
+             if (!currentUserId) return;
+
+            // Fetch last 7 days of calorie logs
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 6);
+            
+            const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/logs`);
+            const qLogs = query(logsRef, where('__name__', '>=', startDate.toISOString().split('T')[0]));
+            const logSnapshot = await getDocs(qLogs);
+            
+            let calorieHistory = "Recent calorie history:\n";
+            logSnapshot.forEach(doc => {
+                const items = doc.data().items || {};
+                const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
+                calorieHistory += `- ${doc.id}: ${total} kcal\n`;
+            });
+
+            // Fetch weight history
+            const weightRef = collection(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`);
+            const qWeight = query(weightRef);
+            const weightSnapshot = await getDocs(qWeight);
+
+            let weightHistory = "Recent weight history:\n";
+            const weights = [];
+            weightSnapshot.forEach(doc => weights.push(doc.data()));
+            weights.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(w => {
+                weightHistory += `- ${w.date}: ${w.weight} kg\n`;
+            });
+            
+            const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : userProfile.startWeight;
+
+            healthDataSummary = `
+                User Profile and Goals:
+                - Name: ${userProfile.name}
+                - Starting Weight: ${userProfile.startWeight} kg
+                - Current Weight: ${latestWeight} kg
+                - Goal Weight: ${userProfile.goalWeight} kg
+                - Daily Calorie Target: ${userProfile.calorieTarget} kcal
+                
+                ${calorieHistory}
+                ${weightHistory}
+            `;
         }
 
     </script>
