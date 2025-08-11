@@ -88,7 +88,7 @@
     </div>
 
 
-    <div class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
+    <div id="main-container" class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8 hidden">
         
         <!-- Header with Theme Toggle -->
         <header class="text-center mb-8 relative">
@@ -228,6 +228,7 @@
         const auth = getAuth(app);
 
         // --- UI Elements ---
+        const mainContainer = document.getElementById('main-container');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const searchLoader = document.getElementById('search-loader');
@@ -307,7 +308,7 @@
             } else {
                 currentUserId = null;
                 if (unsubscribeLog) unsubscribeLog();
-                // Clear UI for signed-out state
+                mainContainer.classList.add('hidden');
                 welcomeMessage.textContent = 'Smart Calorie Counter';
                 emptyLogMessage.textContent = 'Sign in to start tracking!';
                 emptyLogMessage.classList.remove('hidden');
@@ -334,19 +335,16 @@
 
             if (docSnap.exists()) {
                 userProfile = docSnap.data();
+                mainContainer.classList.remove('hidden');
                 settingsModal.classList.add('hidden');
-                await initializeAppData(); // Make this async to wait for target calculation
+                await initializeAppData();
             } else {
-                // First time user, show onboarding
+                mainContainer.classList.add('hidden');
                 settingsTitle.textContent = "Welcome!";
                 settingsSubtitle.textContent = "Let's set up your profile to get started.";
                 closeSettingsBtn.classList.add('hidden');
                 recalculateTargetBtn.classList.add('hidden');
                 settingsModal.classList.remove('hidden');
-                // Ensure main content loaders are hidden for new users
-                logLoader.classList.add('hidden');
-                weightChartLoader.classList.add('hidden');
-                calorieChartLoader.classList.add('hidden');
             }
         }
 
@@ -374,7 +372,7 @@
                 return;
             }
 
-            const isNewUser = !userProfile.name; // Check if it's the first time saving
+            const isNewUser = !userProfile.name;
             const profileData = { name, startWeight, goalWeight };
             const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
             
@@ -382,13 +380,13 @@
                 await setDoc(profileRef, profileData, { merge: true });
                 userProfile = { ...userProfile, ...profileData };
                 
-                // Only calculate target automatically for new users or when explicitly asked
                 if (isNewUser) {
                     await calculateAndSaveCalorieTarget();
                 }
-
+                
+                mainContainer.classList.remove('hidden');
                 settingsModal.classList.add('hidden');
-                await initializeAppData(); // Re-initialize all data after saving
+                await initializeAppData();
             } catch (error) {
                 console.error("Error saving profile:", error);
             }
@@ -408,7 +406,7 @@
         closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
         saveSettingsBtn.addEventListener('click', saveUserProfile);
         recalculateTargetBtn.addEventListener('click', async () => {
-            await saveUserProfile(); // Save any changes first
+            await saveUserProfile();
             await calculateAndSaveCalorieTarget();
             settingsModal.classList.add('hidden');
         });
@@ -538,7 +536,7 @@
 
             const totalDeficitNeeded = weightToLose * 7700;
             
-            const historicalIntake = Object.values(calorieHistoryData).filter(cals => cals > 0); // Only average non-zero days
+            const historicalIntake = Object.values(calorieHistoryData).filter(cals => cals > 0);
             if (historicalIntake.length < 3) {
                 goalDateDisplay.textContent = "More data needed";
                 return;
