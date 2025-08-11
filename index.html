@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Calorie Counter</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js and Annotation Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.4.0/chartjs-plugin-annotation.min.js"></script>
+
+    <style>
+        /* Custom styles to complement Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Simple loading spinner animation */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        .dark .loader {
+            border-color: #4a5568; /* dark:border-gray-600 */
+            border-top-color: #60a5fa; /* dark:border-blue-400 */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Ensure chart is responsive */
+        .chart-container {
+            position: relative;
+            height: 40vh;
+            width: 100%;
+        }
+    </style>
+    <script>
+        // Apply theme on initial load to prevent flash of wrong theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+
+    <!-- NEW: Settings/Onboarding Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6">
+            <h2 id="settings-title" class="text-3xl font-bold text-center text-gray-900 dark:text-white">Welcome!</h2>
+            <p id="settings-subtitle" class="text-center text-gray-600 dark:text-gray-400">Let's set up your profile to get started.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="userNameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</label>
+                    <input type="text" id="userNameInput" placeholder="e.g., Rohan" class="mt-1 w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="startWeightInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Starting Weight (kg)</label>
+                    <input type="number" id="startWeightInput" step="0.1" placeholder="e.g., 87.5" class="mt-1 w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="goalWeightInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Goal Weight (kg)</label>
+                    <input type="number" id="goalWeightInput" step="0.1" placeholder="e.g., 76" class="mt-1 w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <button id="save-settings-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg">Save and Start</button>
+            <button id="close-settings-btn" class="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:underline hidden">Close</button>
+        </div>
+    </div>
+
+
+    <div class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
+        
+        <!-- Header with Theme Toggle -->
+        <header class="text-center mb-8 relative">
+            <h1 id="welcome-message" class="text-4xl font-bold text-gray-900 dark:text-white">Smart Calorie Counter</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Your personal AI-powered nutrition assistant.</p>
+            <div class="absolute top-0 right-0 flex items-center space-x-2">
+                <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                    <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+                 <button id="open-settings-btn" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main App Body -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg space-y-8">
+
+            <!-- AI Coach Section -->
+            <div class="ai-coach-section">
+                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">AI Coach</h2>
+                 <div id="ai-response-container" class="p-4 bg-blue-50 dark:bg-gray-700 rounded-lg min-h-[100px] flex items-center justify-center">
+                     <p id="ai-response" class="text-gray-700 dark:text-gray-300 italic">Click the button below for a personalized tip on healthy Indian eating!</p>
+                     <div id="ai-loader" class="loader hidden"></div>
+                 </div>
+                 <button id="get-ai-tip-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition">
+                     Get Advice
+                 </button>
+            </div>
+
+            <!-- Search Section -->
+            <div class="search-section">
+                <label for="searchInput" class="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Food</label>
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="e.g., '1 cup rice' or 'samosa'" class="w-full p-4 pr-12 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder-gray-500 dark:placeholder-gray-400">
+                    <div id="search-loader" class="loader absolute right-4 top-1/2 -translate-y-1/2 hidden"></div>
+                </div>
+                <div id="searchResults" class="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md max-h-64 overflow-y-auto"></div>
+            </div>
+
+            <!-- Today's Log Section -->
+            <div class="log-section">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Today's Log</h2>
+                <div id="log-loader" class="flex justify-center p-4">
+                    <div class="loader"></div>
+                </div>
+                <ul id="dailyLog" class="space-y-3"></ul>
+                <div id="empty-log-message" class="text-center py-8 text-gray-500 dark:text-gray-400 hidden">
+                    <p>Your log is empty. Search for a food to get started!</p>
+                </div>
+                <div class="total-calories mt-6 pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <span class="text-xl font-semibold text-gray-700 dark:text-gray-300">Total Today:</span>
+                    <span id="totalCalories" class="text-3xl font-bold text-blue-600 dark:text-blue-400">0</span>
+                    <span class="text-xl font-semibold text-gray-700 dark:text-gray-300">calories</span>
+                </div>
+            </div>
+
+            <!-- Weight Tracking Section -->
+            <div class="weight-tracking-section">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Weight Progress</h2>
+                <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Current Weight</p>
+                        <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Goal Weight</p>
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="goal-weight-display">-- kg</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="number" id="weightInput" step="0.1" placeholder="Enter weight in kg" class="w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder-gray-500 dark:placeholder-gray-400">
+                    <button id="log-weight-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition">Log</button>
+                </div>
+                <div id="weightChartContainer" class="chart-container mt-4">
+                    <canvas id="weightChart"></canvas>
+                </div>
+                <div id="weight-chart-loader" class="flex justify-center p-4 hidden">
+                    <div class="loader"></div>
+                </div>
+            </div>
+            
+            <!-- History Chart Section -->
+            <div class="history-section">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Calorie History</h2>
+                <div class="flex justify-center space-x-2 sm:space-x-4 mb-4">
+                    <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">7 Days</button>
+                    <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">15 Days</button>
+                    <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">30 Days</button>
+                </div>
+                <div id="calorieChartContainer" class="chart-container">
+                    <canvas id="calorieHistoryChart"></canvas>
+                </div>
+                 <div id="calorie-chart-loader" class="flex justify-center p-4 hidden">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User ID Display -->
+        <div class="text-center mt-4">
+            <p class="text-xs text-gray-500 dark:text-gray-500">User ID: <span id="userIdDisplay">Not signed in</span></p>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 1. API CONFIGURATION ---
+        const EDAMAM_APP_ID = 'ede9fe7e';
+        const EDAMAM_APP_KEY = '4c5da630d3f71542b3113c07bd146ed6';
+        const GEMINI_API_KEY = ''; 
+
+        // --- 2. FIREBASE SETUP ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", projectId: "YOUR_PROJECT_ID" };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- UI Elements ---
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const searchLoader = document.getElementById('search-loader');
+        const dailyLog = document.getElementById('dailyLog');
+        const totalCaloriesSpan = document.getElementById('totalCalories');
+        const logLoader = document.getElementById('log-loader');
+        const emptyLogMessage = document.getElementById('empty-log-message');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const themeToggleButton = document.getElementById('theme-toggle');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const historyBtns = document.querySelectorAll('.history-btn');
+        const calorieChartLoader = document.getElementById('calorie-chart-loader');
+        const calorieChartContainer = document.getElementById('calorieChartContainer');
+        const aiResponseEl = document.getElementById('ai-response');
+        const getAiTipBtn = document.getElementById('get-ai-tip-btn');
+        const aiLoader = document.getElementById('ai-loader');
+        const weightInput = document.getElementById('weightInput');
+        const logWeightBtn = document.getElementById('log-weight-btn');
+        const currentWeightDisplay = document.getElementById('current-weight-display');
+        const goalWeightDisplay = document.getElementById('goal-weight-display');
+        const weightChartLoader = document.getElementById('weight-chart-loader');
+        const weightChartContainer = document.getElementById('weightChartContainer');
+        const settingsModal = document.getElementById('settings-modal');
+        const settingsTitle = document.getElementById('settings-title');
+        const settingsSubtitle = document.getElementById('settings-subtitle');
+        const userNameInput = document.getElementById('userNameInput');
+        const startWeightInput = document.getElementById('startWeightInput');
+        const goalWeightInput = document.getElementById('goalWeightInput');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const openSettingsBtn = document.getElementById('open-settings-btn');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const welcomeMessage = document.getElementById('welcome-message');
+
+
+        let currentUserId = null;
+        let userProfile = {};
+        let dailyItems = [];
+        let calorieHistoryData = {};
+        let weightHistoryData = [];
+        let searchTimeout;
+        let unsubscribeLog;
+        let calorieHistoryChart = null;
+        let weightHistoryChart = null;
+
+        // --- THEME TOGGLE LOGIC ---
+        function updateThemeIcon() {
+            if (document.documentElement.classList.contains('dark')) {
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            } else {
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            }
+        }
+
+        themeToggleButton.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            updateThemeIcon();
+            if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
+            if (weightHistoryChart) updateChartAppearance(weightHistoryChart, true);
+        });
+
+        updateThemeIcon();
+
+        // --- AUTHENTICATION & USER PROFILE ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                currentUserId = user.uid;
+                userIdDisplay.textContent = currentUserId;
+                loadUserProfile();
+            } else {
+                currentUserId = null;
+                if (unsubscribeLog) unsubscribeLog();
+                // Clear UI
+            }
+        });
+
+        async function signIn() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication failed:", error);
+            }
+        }
+        
+        async function loadUserProfile() {
+            if (!currentUserId) return;
+            const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
+            const docSnap = await getDoc(profileRef);
+
+            if (docSnap.exists()) {
+                userProfile = docSnap.data();
+                settingsModal.classList.add('hidden');
+                initializeAppData();
+            } else {
+                // First time user, show onboarding
+                settingsTitle.textContent = "Welcome!";
+                settingsSubtitle.textContent = "Let's set up your profile to get started.";
+                closeSettingsBtn.classList.add('hidden');
+                settingsModal.classList.remove('hidden');
+            }
+        }
+
+        function initializeAppData() {
+            welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
+            goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
+            getTodaysLog();
+            fetchCalorieHistory(7);
+            fetchWeightHistory();
+        }
+
+        async function saveUserProfile() {
+            const name = userNameInput.value;
+            const startWeight = parseFloat(startWeightInput.value);
+            const goalWeight = parseFloat(goalWeightInput.value);
+
+            if (!name || !startWeight || !goalWeight) {
+                alert("Please fill out all fields.");
+                return;
+            }
+
+            const profileData = { name, startWeight, goalWeight };
+            const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
+            
+            try {
+                await setDoc(profileRef, profileData);
+                userProfile = profileData;
+                settingsModal.classList.add('hidden');
+                initializeAppData();
+            } catch (error) {
+                console.error("Error saving profile:", error);
+            }
+        }
+
+        openSettingsBtn.addEventListener('click', () => {
+            userNameInput.value = userProfile.name || '';
+            startWeightInput.value = userProfile.startWeight || '';
+            goalWeightInput.value = userProfile.goalWeight || '';
+            settingsTitle.textContent = "Your Profile";
+            settingsSubtitle.textContent = "Update your goals anytime.";
+            closeSettingsBtn.classList.remove('hidden');
+            settingsModal.classList.remove('hidden');
+        });
+
+        closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+        saveSettingsBtn.addEventListener('click', saveUserProfile);
+        
+        signIn();
+
+        // --- FIRESTORE DATA HANDLING ---
+        function getTodaysLog() {
+            if (!currentUserId) return;
+            logLoader.classList.remove('hidden');
+            const today = new Date().toISOString().split('T')[0];
+            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
+            unsubscribeLog = onSnapshot(docRef, (docSnap) => {
+                logLoader.classList.add('hidden');
+                dailyItems = docSnap.exists() ? docSnap.data().items || [] : [];
+                renderLog();
+            });
+        }
+
+        async function addFoodToDB(foodItem) {
+            if (!currentUserId) return;
+            const today = new Date().toISOString().split('T')[0];
+            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
+            await setDoc(docRef, { items: arrayUnion(foodItem) }, { merge: true });
+            fetchCalorieHistory(parseInt(document.querySelector('.history-btn.bg-blue-100, .history-btn.dark\\:bg-blue-900').dataset.days));
+        }
+
+        async function removeFoodFromDB(foodItem) {
+            if (!currentUserId) return;
+            const today = new Date().toISOString().split('T')[0];
+            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
+            await updateDoc(docRef, { items: arrayRemove(foodItem) });
+            fetchCalorieHistory(parseInt(document.querySelector('.history-btn.bg-blue-100, .history-btn.dark\\:bg-blue-900').dataset.days));
+        }
+
+        async function logWeightToDB(weight) {
+            if (!currentUserId || !weight) return;
+            const today = new Date().toISOString().split('T')[0];
+            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`, today);
+            try {
+                await setDoc(docRef, { weight: parseFloat(weight), date: today });
+                weightInput.value = '';
+                fetchWeightHistory();
+            } catch (error) {
+                console.error("Error logging weight:", error);
+            }
+        }
+        
+        // --- HISTORY & CHARTING ---
+        async function fetchCalorieHistory(days) {
+            if (!currentUserId) return;
+            calorieChartLoader.classList.remove('hidden');
+            calorieChartContainer.classList.add('hidden');
+
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - (days - 1));
+            
+            const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/logs`);
+            const q = query(logsRef, where('__name__', '>=', startDate.toISOString().split('T')[0]), where('__name__', '<=', endDate.toISOString().split('T')[0]));
+
+            try {
+                const querySnapshot = await getDocs(q);
+                const data = {};
+                for (let i = 0; i < days; i++) {
+                    const d = new Date(startDate);
+                    d.setDate(startDate.getDate() + i);
+                    data[d.toISOString().split('T')[0]] = 0;
+                }
+                querySnapshot.forEach((doc) => {
+                    data[doc.id] = doc.data().items.reduce((sum, item) => sum + item.calories, 0);
+                });
+                calorieHistoryData = data; 
+                renderCalorieHistoryChart(data);
+            } finally {
+                calorieChartLoader.classList.add('hidden');
+                calorieChartContainer.classList.remove('hidden');
+            }
+        }
+
+        async function fetchWeightHistory() {
+            if (!currentUserId) return;
+            weightChartLoader.classList.remove('hidden');
+            weightChartContainer.classList.add('hidden');
+
+            const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`);
+            const q = query(logsRef); // Get all weight logs
+
+            try {
+                const querySnapshot = await getDocs(q);
+                const data = [];
+                querySnapshot.forEach(doc => data.push(doc.data()));
+                data.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                weightHistoryData = data;
+                
+                if (data.length > 0) {
+                    currentWeightDisplay.textContent = `${data[data.length - 1].weight} kg`;
+                } else {
+                    currentWeightDisplay.textContent = `${userProfile.startWeight || '--'} kg`;
+                }
+
+                renderWeightChart(data);
+            } finally {
+                weightChartLoader.classList.add('hidden');
+                weightChartContainer.classList.remove('hidden');
+            }
+        }
+
+        function renderCalorieHistoryChart(data) {
+            const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
+            if (calorieHistoryChart) calorieHistoryChart.destroy();
+            calorieHistoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data).map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                    datasets: [{
+                        label: 'Calories',
+                        data: Object.values(data),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1, borderRadius: 5,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+            });
+            updateChartAppearance(calorieHistoryChart);
+        }
+
+        function renderWeightChart(data) {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            if (weightHistoryChart) weightHistoryChart.destroy();
+            
+            const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const values = data.map(d => d.weight);
+
+            weightHistoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Weight (kg)',
+                        data: values,
+                        borderColor: 'rgb(22, 163, 74)',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: false } },
+                    plugins: { 
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                goalLine: {
+                                    type: 'line',
+                                    yMin: userProfile.goalWeight,
+                                    yMax: userProfile.goalWeight,
+                                    borderColor: 'rgb(239, 68, 68)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        content: 'Goal',
+                                        enabled: true,
+                                        position: 'end',
+                                        backgroundColor: 'rgba(239, 68, 68, 0.8)'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            updateChartAppearance(weightHistoryChart, true);
+        }
+        
+        function updateChartAppearance(chart, isWeightChart = false) {
+            if (!chart) return;
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const ticksColor = isDarkMode ? '#d1d5db' : '#4b5563';
+
+            chart.options.scales.x.grid.color = gridColor;
+            chart.options.scales.y.grid.color = gridColor;
+            chart.options.scales.x.ticks.color = ticksColor;
+            chart.options.scales.y.ticks.color = ticksColor;
+
+            if (isWeightChart) {
+                const goalLineColor = isDarkMode ? 'rgba(132, 204, 22, 0.7)' : 'rgb(239, 68, 68)';
+                chart.options.plugins.annotation.annotations.goalLine.borderColor = goalLineColor;
+                chart.options.plugins.annotation.annotations.goalLine.label.backgroundColor = goalLineColor;
+            }
+
+            chart.update();
+        }
+
+        historyBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const days = parseInt(btn.dataset.days);
+                fetchCalorieHistory(days);
+                historyBtns.forEach(b => b.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300'));
+                btn.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300');
+            });
+        });
+
+        logWeightBtn.addEventListener('click', () => {
+            const weight = weightInput.value;
+            if (weight) {
+                logWeightToDB(weight);
+            }
+        });
+
+        // --- GEMINI AI COACH LOGIC ---
+        async function getAICoachTip() {
+            if (!userProfile.goalWeight) {
+                aiResponseEl.textContent = "Please set up your profile first to get personalized advice!";
+                return;
+            }
+            aiResponseEl.classList.add('hidden');
+            aiLoader.classList.remove('hidden');
+            getAiTipBtn.disabled = true;
+
+            const todayTotal = dailyItems.reduce((sum, item) => sum + item.calories, 0);
+            const todayItemsString = dailyItems.map(item => `${item.name} (${item.calories} kcal)`).join(', ') || 'nothing yet';
+            const calorieHistoryString = Object.entries(calorieHistoryData).map(([date, cals]) => `${new Date(date).toLocaleDateString()}: ${cals} kcal`).join('; ');
+            const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length-1].weight : userProfile.startWeight;
+            const weightHistoryString = weightHistoryData.map(d => `${new Date(d.date).toLocaleDateString()}: ${d.weight} kg`).join('; ') || 'No weight logged yet.';
+
+            const prompt = `
+                You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine for a user named ${userProfile.name}.
+                The user is predominantly vegetarian but also eats eggs, tofu, and shrimp for protein.
+                Their starting weight was ${userProfile.startWeight} kg. Their current weight is ${latestWeight} kg. Their goal weight is ${userProfile.goalWeight} kg.
+                
+                Here is their data:
+                - Today's calorie log: ${todayItemsString} (Total: ${todayTotal} calories).
+                - Recent calorie history: ${calorieHistoryString}.
+                - Recent weight history: ${weightHistoryString}.
+
+                Based on all this data, provide a short (2-4 sentences), motivational, and practical tip that acknowledges their weight journey.
+                Your advice should be non-judgmental and MUST focus on one of these topics:
+                1. A low-calorie Indian meal suggestion (e.g., using cauliflower rice, millet/jowar roti).
+                2. A simple, protein-rich shake idea (e.g., with yogurt/tofu and fruit).
+                3. A meal idea incorporating their preferred proteins (egg bhurji, tofu tikka, shrimp curry).
+                
+                Address the user directly by their name and keep the tone positive and supportive of their long-term goal.
+            `;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const result = await response.json();
+                aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error("Gemini API error:", error);
+                aiResponseEl.textContent = "Sorry, I couldn't generate a tip right now. Please try again later.";
+            } finally {
+                aiResponseEl.classList.remove('hidden');
+                aiLoader.classList.add('hidden');
+                getAiTipBtn.disabled = false;
+            }
+        }
+        
+        getAiTipBtn.addEventListener('click', getAICoachTip);
+
+        // --- EDAMAM API FOOD SEARCH ---
+        async function searchFoodAPI(query) {
+            if (EDAMAM_APP_ID.includes('YOUR_') || EDAMAM_APP_KEY.includes('YOUR_')) {
+                searchResults.innerHTML = `<div class="p-4 text-center text-red-500 dark:text-red-400">Please configure Edamam API keys.</div>`;
+                return;
+            }
+            searchLoader.classList.remove('hidden');
+            const url = `https://api.edamam.com/api/food-database/v2/parser?app_id=${EDAMAM_APP_ID}&app_key=${EDAMAM_APP_KEY}&ingr=${encodeURIComponent(query)}&nutrition-type=logging`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('API request failed');
+                const data = await response.json();
+                displaySearchResults(data.hints);
+            } catch (error) {
+                searchResults.innerHTML = `<div class="p-4 text-center text-gray-600 dark:text-gray-400">Could not fetch results.</div>`;
+            } finally {
+                searchLoader.classList.add('hidden');
+            }
+        }
+        
+        // --- UI RENDERING & EVENT LISTENERS ---
+        function displaySearchResults(foods) {
+            searchResults.innerHTML = '';
+            if (foods.length === 0) {
+                searchResults.innerHTML = `<div class="p-4 text-center text-gray-500 dark:text-gray-400">No results found.</div>`;
+                return;
+            }
+            foods.slice(0, 10).forEach(item => {
+                const food = item.food;
+                const foodName = food.label;
+                const calories = food.nutrients.ENERC_KCAL ? Math.round(food.nutrients.ENERC_KCAL) : 0;
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'p-4 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center border-t border-gray-100 dark:border-gray-700';
+                resultDiv.innerHTML = `<div><p class="font-semibold text-gray-800 dark:text-gray-200">${foodName}</p><p class="text-sm text-gray-500 dark:text-gray-400">${calories} calories</p></div><button class="text-blue-600 dark:text-blue-400 font-bold text-2xl">+</button>`;
+                resultDiv.addEventListener('click', () => {
+                    addFoodToDB({ id: `food_${Date.now()}_${Math.random()}`, name: foodName, calories: calories });
+                    searchInput.value = '';
+                    searchResults.innerHTML = '';
+                });
+                searchResults.appendChild(resultDiv);
+            });
+        }
+
+        function renderLog() {
+            dailyLog.innerHTML = '';
+            let total = 0;
+            emptyLogMessage.classList.toggle('hidden', dailyItems.length > 0);
+            dailyItems.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.className = 'p-4 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center';
+                listItem.innerHTML = `<div><p class="font-medium text-gray-900 dark:text-gray-100">${item.name}</p><p class="text-sm text-blue-600 dark:text-blue-400 font-semibold">${item.calories} calories</p></div><button data-item-id="${item.id}" class="remove-btn text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>`;
+                dailyLog.appendChild(listItem);
+                total += item.calories;
+            });
+            totalCaloriesSpan.textContent = total;
+        }
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            if (query.length < 3) {
+                searchResults.innerHTML = '';
+                return;
+            }
+            searchTimeout = setTimeout(() => searchFoodAPI(query), 500);
+        });
+        
+        dailyLog.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('remove-btn')) {
+                const itemId = e.target.getAttribute('data-item-id');
+                const itemToRemove = dailyItems.find(item => item.id === itemId);
+                if (itemToRemove) removeFoodFromDB(itemToRemove);
+            }
+        });
+
+    </script>
+</body>
+</html>
