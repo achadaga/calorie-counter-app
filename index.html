@@ -227,46 +227,15 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // --- UI Elements ---
-        const mainContainer = document.getElementById('main-container');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        const searchLoader = document.getElementById('search-loader');
-        const dailyLog = document.getElementById('dailyLog');
-        const totalCaloriesSpan = document.getElementById('totalCalories');
-        const calorieTargetSpan = document.getElementById('calorieTarget');
-        const calorieProgressBar = document.getElementById('calorie-progress-bar');
-        const logLoader = document.getElementById('log-loader');
-        const emptyLogMessage = document.getElementById('empty-log-message');
-        const userIdDisplay = document.getElementById('userIdDisplay');
-        const themeToggleButton = document.getElementById('theme-toggle');
-        const lightIcon = document.getElementById('theme-toggle-light-icon');
-        const darkIcon = document.getElementById('theme-toggle-dark-icon');
-        const historyBtns = document.querySelectorAll('.history-btn');
-        const calorieChartLoader = document.getElementById('calorie-chart-loader');
-        const calorieChartContainer = document.getElementById('calorieChartContainer');
-        const aiResponseEl = document.getElementById('ai-response');
-        const getAiTipBtn = document.getElementById('get-ai-tip-btn');
-        const aiLoader = document.getElementById('ai-loader');
-        const weightInput = document.getElementById('weightInput');
-        const logWeightBtn = document.getElementById('log-weight-btn');
-        const currentWeightDisplay = document.getElementById('current-weight-display');
-        const goalWeightDisplay = document.getElementById('goal-weight-display');
-        const goalDateDisplay = document.getElementById('goal-date-display');
-        const weightChartLoader = document.getElementById('weight-chart-loader');
-        const weightChartContainer = document.getElementById('weightChartContainer');
-        const settingsModal = document.getElementById('settings-modal');
-        const settingsTitle = document.getElementById('settings-title');
-        const settingsSubtitle = document.getElementById('settings-subtitle');
-        const userNameInput = document.getElementById('userNameInput');
-        const startWeightInput = document.getElementById('startWeightInput');
-        const goalWeightInput = document.getElementById('goalWeightInput');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
-        const openSettingsBtn = document.getElementById('open-settings-btn');
-        const closeSettingsBtn = document.getElementById('close-settings-btn');
-        const recalculateTargetBtn = document.getElementById('recalculate-target-btn');
-        const welcomeMessage = document.getElementById('welcome-message');
-
+        // --- 3. DECLARE ALL VARIABLES ---
+        let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCaloriesSpan,
+            calorieTargetSpan, calorieProgressBar, logLoader, emptyLogMessage, userIdDisplay,
+            themeToggleButton, lightIcon, darkIcon, historyBtns, calorieChartLoader,
+            calorieChartContainer, aiResponseEl, getAiTipBtn, aiLoader, weightInput,
+            logWeightBtn, currentWeightDisplay, goalWeightDisplay, goalDateDisplay,
+            weightChartLoader, weightChartContainer, settingsModal, settingsTitle,
+            settingsSubtitle, userNameInput, startWeightInput, goalWeightInput,
+            saveSettingsBtn, openSettingsBtn, closeSettingsBtn, recalculateTargetBtn, welcomeMessage;
 
         let currentUserId = null;
         let userProfile = {};
@@ -275,10 +244,80 @@
         let weightHistoryData = [];
         let searchTimeout;
         let unsubscribeLog;
+        let unsubscribeWeightHistory;
         let calorieHistoryChart = null;
         let weightHistoryChart = null;
 
+        // --- 4. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Assign all UI elements
+            mainContainer = document.getElementById('main-container');
+            searchInput = document.getElementById('searchInput');
+            searchResults = document.getElementById('searchResults');
+            searchLoader = document.getElementById('search-loader');
+            dailyLog = document.getElementById('dailyLog');
+            totalCaloriesSpan = document.getElementById('totalCalories');
+            calorieTargetSpan = document.getElementById('calorieTarget');
+            calorieProgressBar = document.getElementById('calorie-progress-bar');
+            logLoader = document.getElementById('log-loader');
+            emptyLogMessage = document.getElementById('empty-log-message');
+            userIdDisplay = document.getElementById('userIdDisplay');
+            themeToggleButton = document.getElementById('theme-toggle');
+            lightIcon = document.getElementById('theme-toggle-light-icon');
+            darkIcon = document.getElementById('theme-toggle-dark-icon');
+            historyBtns = document.querySelectorAll('.history-btn');
+            calorieChartLoader = document.getElementById('calorie-chart-loader');
+            calorieChartContainer = document.getElementById('calorieChartContainer');
+            aiResponseEl = document.getElementById('ai-response');
+            getAiTipBtn = document.getElementById('get-ai-tip-btn');
+            aiLoader = document.getElementById('ai-loader');
+            weightInput = document.getElementById('weightInput');
+            logWeightBtn = document.getElementById('log-weight-btn');
+            currentWeightDisplay = document.getElementById('current-weight-display');
+            goalWeightDisplay = document.getElementById('goal-weight-display');
+            goalDateDisplay = document.getElementById('goal-date-display');
+            weightChartLoader = document.getElementById('weight-chart-loader');
+            weightChartContainer = document.getElementById('weightChartContainer');
+            settingsModal = document.getElementById('settings-modal');
+            settingsTitle = document.getElementById('settings-title');
+            settingsSubtitle = document.getElementById('settings-subtitle');
+            userNameInput = document.getElementById('userNameInput');
+            startWeightInput = document.getElementById('startWeightInput');
+            goalWeightInput = document.getElementById('goalWeightInput');
+            saveSettingsBtn = document.getElementById('save-settings-btn');
+            openSettingsBtn = document.getElementById('open-settings-btn');
+            closeSettingsBtn = document.getElementById('close-settings-btn');
+            recalculateTargetBtn = document.getElementById('recalculate-target-btn');
+            welcomeMessage = document.getElementById('welcome-message');
+
+            // Set up event listeners
+            themeToggleButton.addEventListener('click', handleThemeToggle);
+            openSettingsBtn.addEventListener('click', handleOpenSettings);
+            closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            saveSettingsBtn.addEventListener('click', saveUserProfile);
+            recalculateTargetBtn.addEventListener('click', handleRecalculateTarget);
+            historyBtns.forEach(btn => {
+                btn.addEventListener('click', () => handleHistoryButtonClick(btn));
+            });
+            logWeightBtn.addEventListener('click', handleLogWeight);
+            getAiTipBtn.addEventListener('click', getAICoachTip);
+            searchInput.addEventListener('input', handleSearchInput);
+            dailyLog.addEventListener('click', handleRemoveFood);
+
+            // Start the authentication process
+            signIn();
+        });
+
+
         // --- THEME TOGGLE LOGIC ---
+        function handleThemeToggle() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            updateThemeIcon();
+            if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
+            if (weightHistoryChart) updateChartAppearance(weightHistoryChart, true);
+        }
+        
         function updateThemeIcon() {
             if (document.documentElement.classList.contains('dark')) {
                 lightIcon.classList.remove('hidden');
@@ -289,16 +328,6 @@
             }
         }
 
-        themeToggleButton.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-            updateThemeIcon();
-            if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
-            if (weightHistoryChart) updateChartAppearance(weightHistoryChart, true);
-        });
-
-        updateThemeIcon();
-
         // --- AUTHENTICATION & USER PROFILE ---
         onAuthStateChanged(auth, user => {
             if (user) {
@@ -308,6 +337,7 @@
             } else {
                 currentUserId = null;
                 if (unsubscribeLog) unsubscribeLog();
+                if (unsubscribeWeightHistory) unsubscribeWeightHistory();
                 mainContainer.classList.add('hidden');
                 welcomeMessage.textContent = 'Smart Calorie Counter';
                 emptyLogMessage.textContent = 'Sign in to start tracking!';
@@ -335,9 +365,9 @@
 
             if (docSnap.exists()) {
                 userProfile = docSnap.data();
+                await initializeAppData();
                 mainContainer.classList.remove('hidden');
                 settingsModal.classList.add('hidden');
-                await initializeAppData();
             } else {
                 mainContainer.classList.add('hidden');
                 settingsTitle.textContent = "Welcome!";
@@ -358,8 +388,8 @@
             calorieTargetSpan.textContent = userProfile.calorieTarget || '...';
 
             getTodaysLog();
+            listenForWeightHistory();
             fetchCalorieHistory(7);
-            fetchWeightHistory();
         }
 
         async function saveUserProfile() {
@@ -384,15 +414,15 @@
                     await calculateAndSaveCalorieTarget();
                 }
                 
-                mainContainer.classList.remove('hidden');
                 settingsModal.classList.add('hidden');
                 await initializeAppData();
+                mainContainer.classList.remove('hidden');
             } catch (error) {
                 console.error("Error saving profile:", error);
             }
         }
 
-        openSettingsBtn.addEventListener('click', () => {
+        function handleOpenSettings() {
             userNameInput.value = userProfile.name || '';
             startWeightInput.value = userProfile.startWeight || '';
             goalWeightInput.value = userProfile.goalWeight || '';
@@ -401,17 +431,13 @@
             closeSettingsBtn.classList.remove('hidden');
             recalculateTargetBtn.classList.remove('hidden');
             settingsModal.classList.remove('hidden');
-        });
+        }
 
-        closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-        saveSettingsBtn.addEventListener('click', saveUserProfile);
-        recalculateTargetBtn.addEventListener('click', async () => {
+        async function handleRecalculateTarget() {
             await saveUserProfile();
             await calculateAndSaveCalorieTarget();
             settingsModal.classList.add('hidden');
-        });
-        
-        signIn();
+        }
 
         // --- FIRESTORE DATA HANDLING ---
         function getTodaysLog() {
@@ -451,7 +477,6 @@
             try {
                 await setDoc(docRef, { weight: parseFloat(weight), date: today });
                 weightInput.value = '';
-                fetchWeightHistory();
             } catch (error) {
                 console.error("Error logging weight:", error);
             }
@@ -490,7 +515,8 @@
             }
         }
 
-        async function fetchWeightHistory() {
+        function listenForWeightHistory() {
+            if (unsubscribeWeightHistory) unsubscribeWeightHistory();
             if (!currentUserId) return;
             weightChartLoader.classList.remove('hidden');
             weightChartContainer.classList.add('hidden');
@@ -498,8 +524,7 @@
             const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`);
             const q = query(logsRef); 
 
-            try {
-                const querySnapshot = await getDocs(q);
+            unsubscribeWeightHistory = onSnapshot(q, (querySnapshot) => {
                 const data = [];
                 querySnapshot.forEach(doc => data.push(doc.data()));
                 data.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -514,10 +539,13 @@
 
                 renderWeightChart(data);
                 calculateAndDisplayGoalDate();
-            } finally {
+                
                 weightChartLoader.classList.add('hidden');
                 weightChartContainer.classList.remove('hidden');
-            }
+            }, (error) => {
+                console.error("Error listening for weight history:", error);
+                weightChartLoader.classList.add('hidden');
+            });
         }
         
         function calculateAndDisplayGoalDate() {
@@ -621,19 +649,17 @@
             chart.update();
         }
 
-        historyBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const days = parseInt(btn.dataset.days);
-                fetchCalorieHistory(days);
-                historyBtns.forEach(b => b.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300'));
-                btn.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300');
-            });
-        });
+        function handleHistoryButtonClick(btn) {
+            const days = parseInt(btn.dataset.days);
+            fetchCalorieHistory(days);
+            historyBtns.forEach(b => b.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300'));
+            btn.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300');
+        }
 
-        logWeightBtn.addEventListener('click', () => {
+        function handleLogWeight() {
             const weight = weightInput.value;
             if (weight) logWeightToDB(weight);
-        });
+        }
 
         // --- GEMINI AI COACH LOGIC ---
         async function calculateAndSaveCalorieTarget() {
@@ -722,9 +748,17 @@
             }
         }
         
-        getAiTipBtn.addEventListener('click', getAICoachTip);
-
         // --- EDAMAM API FOOD SEARCH ---
+        function handleSearchInput() {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            if (query.length < 3) {
+                searchResults.innerHTML = '';
+                return;
+            }
+            searchTimeout = setTimeout(() => searchFoodAPI(query), 500);
+        }
+
         async function searchFoodAPI(query) {
             if (EDAMAM_APP_ID.includes('YOUR_') || EDAMAM_APP_KEY.includes('YOUR_')) {
                 searchResults.innerHTML = `<div class="p-4 text-center text-red-500 dark:text-red-400">Please configure Edamam API keys.</div>`;
@@ -796,23 +830,13 @@
             calculateAndDisplayGoalDate();
         }
 
-        searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            const query = searchInput.value.trim();
-            if (query.length < 3) {
-                searchResults.innerHTML = '';
-                return;
-            }
-            searchTimeout = setTimeout(() => searchFoodAPI(query), 500);
-        });
-        
-        dailyLog.addEventListener('click', (e) => {
+        function handleRemoveFood(e) {
             if (e.target && e.target.classList.contains('remove-btn')) {
                 const itemId = e.target.getAttribute('data-item-id');
                 const itemToRemove = dailyItems.find(item => item.id === itemId);
                 if (itemToRemove) removeFoodFromDB(itemToRemove);
             }
-        });
+        }
 
     </script>
 </body>
