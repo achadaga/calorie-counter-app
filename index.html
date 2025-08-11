@@ -98,6 +98,16 @@
                 </div>
                 <div id="searchResults" class="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md max-h-64 overflow-y-auto"></div>
             </div>
+            
+            <!-- Manual Add Section -->
+            <div class="manual-add-section">
+                <label class="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Quick Calories</label>
+                <div class="flex gap-2">
+                    <input type="text" id="manualNameInput" placeholder="Optional name" class="w-2/5 p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    <input type="number" id="manualCaloriesInput" placeholder="Calories" class="w-2/5 p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    <button id="add-manual-btn" class="w-1/5 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition">Add</button>
+                </div>
+            </div>
 
             <!-- Today's Log Section -->
             <div class="log-section">
@@ -184,8 +194,8 @@
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. API CONFIGURATION ---
-        const EDAMAM_APP_ID = 'YOUR_EDAMAM_APP_ID';
-        const EDAMAM_APP_KEY = 'YOUR_EDAMAM_APP_KEY';
+        const EDAMAM_APP_ID = 'ede9fe7e';
+        const EDAMAM_APP_KEY = '4c5da630d3f71542b3113c07bd146ed6';
         const GEMINI_API_KEY = ''; 
 
         // --- 2. FIREBASE SETUP ---
@@ -202,7 +212,8 @@
             themeToggleButton, lightIcon, darkIcon, historyBtns, calorieChartLoader,
             calorieChartContainer, aiResponseEl, getAiTipBtn, aiLoader, weightInput,
             logWeightBtn, currentWeightDisplay, goalWeightDisplay, goalDateDisplay,
-            weightChartLoader, weightChartContainer, welcomeMessage;
+            weightChartLoader, weightChartContainer, welcomeMessage, manualNameInput,
+            manualCaloriesInput, addManualBtn;
 
         let currentUserId = null;
         const userProfile = {
@@ -211,7 +222,7 @@
             goalWeight: 76,
             calorieTarget: 1850 // A default target
         };
-        let dailyItems = [];
+        let dailyItems = []; // Reverted to Array
         let calorieHistoryData = {};
         let weightHistoryData = [];
         let searchTimeout;
@@ -251,16 +262,18 @@
             weightChartLoader = document.getElementById('weight-chart-loader');
             weightChartContainer = document.getElementById('weightChartContainer');
             welcomeMessage = document.getElementById('welcome-message');
+            manualNameInput = document.getElementById('manualNameInput');
+            manualCaloriesInput = document.getElementById('manualCaloriesInput');
+            addManualBtn = document.getElementById('add-manual-btn');
 
             // Set up event listeners
             themeToggleButton.addEventListener('click', handleThemeToggle);
-            historyBtns.forEach(btn => {
-                btn.addEventListener('click', () => handleHistoryButtonClick(btn));
-            });
+            historyBtns.forEach(btn => btn.addEventListener('click', () => handleHistoryButtonClick(btn)));
             logWeightBtn.addEventListener('click', handleLogWeight);
             getAiTipBtn.addEventListener('click', getAICoachTip);
             searchInput.addEventListener('input', handleSearchInput);
             dailyLog.addEventListener('click', handleRemoveFood);
+            addManualBtn.addEventListener('click', handleManualAdd);
 
             // Start the authentication process
             signIn();
@@ -388,7 +401,8 @@
                     data[d.toISOString().split('T')[0]] = 0;
                 }
                 querySnapshot.forEach((doc) => {
-                    data[doc.id] = doc.data().items.reduce((sum, item) => sum + item.calories, 0);
+                    const items = doc.data().items || [];
+                    data[doc.id] = items.reduce((sum, item) => sum + item.calories, 0);
                 });
                 calorieHistoryData = data; 
                 renderCalorieHistoryChart(data);
@@ -546,41 +560,6 @@
         }
 
         // --- GEMINI AI COACH LOGIC ---
-        async function calculateAndSaveCalorieTarget() {
-            calorieTargetSpan.textContent = '...';
-            const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length-1].weight : userProfile.startWeight;
-            const prompt = `
-                As a nutritionist AI, calculate a daily calorie target for a user with the following details:
-                - Starting Weight: ${userProfile.startWeight} kg
-                - Current Weight: ${latestWeight} kg
-                - Goal Weight: ${userProfile.goalWeight} kg
-                The user wants gradual, sustainable weight loss, not a crash diet.
-                Based on these factors, provide a single, reasonable daily calorie target.
-                IMPORTANT: Respond with ONLY the numerical value for the daily calorie target and nothing else. Example: 1850
-            `;
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-                const result = await response.json();
-                const target = parseInt(result.candidates[0].content.parts[0].text.trim());
-                
-                if (!isNaN(target)) {
-                    userProfile.calorieTarget = target;
-                    const profileRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile`, 'settings');
-                    await setDoc(profileRef, { calorieTarget: target }, { merge: true });
-                    calorieTargetSpan.textContent = target;
-                    renderLog();
-                } else {
-                    calorieTargetSpan.textContent = 'Error';
-                }
-            } catch (error) {
-                console.error("Error calculating target:", error);
-                calorieTargetSpan.textContent = 'Error';
-            }
-        }
-
         async function getAICoachTip() {
             if (!userProfile.goalWeight) {
                 aiResponseEl.textContent = "Please set up your profile first to get personalized advice!";
@@ -692,7 +671,7 @@
             dailyItems.forEach(item => {
                 const listItem = document.createElement('li');
                 listItem.className = 'p-4 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center';
-                listItem.innerHTML = `<div><p class="font-medium text-gray-900 dark:text-gray-100">${item.name}</p><p class="text-sm text-blue-600 dark:text-blue-400 font-semibold">${item.calories} calories</p></div><button data-item-id="${item.id}" class="remove-btn text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>`;
+                listItem.innerHTML = `<div><p class="font-medium text-gray-900 dark:text-gray-100">${item.name}</p><p class="text-sm text-blue-600 dark:text-blue-400 font-semibold">${item.calories} calories</p></div><button data-id="${item.id}" class="remove-btn text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>`;
                 dailyLog.appendChild(listItem);
                 total += item.calories;
             });
@@ -715,11 +694,27 @@
         }
 
         function handleRemoveFood(e) {
-            if (e.target && e.target.classList.contains('remove-btn')) {
-                const itemId = e.target.getAttribute('data-item-id');
+            if (e.target.classList.contains('remove-btn')) {
+                const itemId = e.target.dataset.id;
                 const itemToRemove = dailyItems.find(item => item.id === itemId);
-                if (itemToRemove) removeFoodFromDB(itemToRemove);
+                if (itemToRemove) {
+                    removeFoodFromDB(itemToRemove);
+                }
             }
+        }
+        
+        function handleManualAdd() {
+            const name = manualNameInput.value || 'Manual Entry';
+            const calories = parseInt(manualCaloriesInput.value);
+
+            if (!calories || calories <= 0) {
+                alert("Please enter a valid calorie amount.");
+                return;
+            }
+
+            addFoodToDB({ id: `food_${Date.now()}_${Math.random()}`, name, calories });
+            manualNameInput.value = '';
+            manualCaloriesInput.value = '';
         }
 
     </script>
