@@ -238,7 +238,6 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. API CONFIGURATION ---
@@ -252,7 +251,6 @@
         
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
 
         // --- 3. DECLARE ALL VARIABLES ---
         let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCaloriesSpan,
@@ -335,8 +333,8 @@
             chatSendBtn.addEventListener('click', handleChatSend);
             chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatSend(); });
 
-            // Start the authentication process
-            signIn();
+            // Start the app
+            initializeAppData();
         });
 
 
@@ -359,33 +357,20 @@
             }
         }
 
-        // --- AUTHENTICATION & APP INITIALIZATION ---
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                currentUserId = user.uid;
-                userIdDisplay.textContent = currentUserId.substring(0, 8) + '...';
-                initializeAppData();
-            } else {
-                currentUserId = null;
-                if (unsubscribeLog) unsubscribeLog();
-                if (unsubscribeWeightHistory) unsubscribeWeightHistory();
-                mainContainer.classList.add('hidden');
+        // --- APP INITIALIZATION ---
+        function getLocalUserId() {
+            let localId = localStorage.getItem('calorie-tracker-id');
+            if (!localId) {
+                localId = 'user_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('calorie-tracker-id', localId);
             }
-        });
-
-        async function signIn() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Authentication failed:", error);
-            }
+            return localId;
         }
         
         async function initializeAppData() {
+            currentUserId = getLocalUserId();
+            userIdDisplay.textContent = currentUserId.substring(0, 8) + '...';
+
             mainContainer.classList.remove('hidden');
             welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
             goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
@@ -402,7 +387,7 @@
             logLoader.classList.remove('hidden');
             emptyLogMessage.classList.add('hidden');
             const today = new Date().toISOString().split('T')[0];
-            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
+            const docRef = doc(db, `artifacts/${appId}/sessions/${currentUserId}/logs`, today);
             unsubscribeLog = onSnapshot(docRef, (docSnap) => {
                 logLoader.classList.add('hidden');
                 dailyItems = docSnap.exists() ? docSnap.data().items || {} : {};
@@ -416,7 +401,7 @@
         async function addFoodToDB(foodItem) {
             if (!currentUserId) return;
             const today = new Date().toISOString().split('T')[0];
-            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
+            const docRef = doc(db, `artifacts/${appId}/sessions/${currentUserId}/logs`, today);
             
             const foodId = foodItem.name.replace(/[^a-zA-Z0-9]/g, '');
             const existingItem = dailyItems[foodId];
@@ -434,7 +419,7 @@
         async function updateFoodQuantityInDB(foodId, newQuantity) {
             if (!currentUserId) return;
             const today = new Date().toISOString().split('T')[0];
-            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/logs`, today);
+            const docRef = doc(db, `artifacts/${appId}/sessions/${currentUserId}/logs`, today);
             const updates = {};
 
             if (newQuantity > 0) {
@@ -448,7 +433,7 @@
         async function logWeightToDB(weight) {
             if (!currentUserId || !weight) return;
             const today = new Date().toISOString().split('T')[0];
-            const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`, today);
+            const docRef = doc(db, `artifacts/${appId}/sessions/${currentUserId}/weightLogs`, today);
             try {
                 await setDoc(docRef, { weight: parseFloat(weight), date: today });
                 weightInput.value = '';
@@ -467,7 +452,7 @@
             const startDate = new Date();
             startDate.setDate(endDate.getDate() - (days - 1));
             
-            const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/logs`);
+            const logsRef = collection(db, `artifacts/${appId}/sessions/${currentUserId}/logs`);
             const q = query(logsRef, where('__name__', '>=', startDate.toISOString().split('T')[0]), where('__name__', '<=', endDate.toISOString().split('T')[0]));
 
             try {
@@ -497,7 +482,7 @@
             weightChartLoader.classList.remove('hidden');
             weightChartContainer.classList.add('hidden');
 
-            const logsRef = collection(db, `artifacts/${appId}/users/${currentUserId}/weightLogs`);
+            const logsRef = collection(db, `artifacts/${appId}/sessions/${currentUserId}/weightLogs`);
             const q = query(logsRef); 
 
             unsubscribeWeightHistory = onSnapshot(q, (querySnapshot) => {
