@@ -240,7 +240,7 @@
         // --- 1. API CONFIGURATION ---
         const EDAMAM_APP_ID = 'ede9fe7e';
         const EDAMAM_APP_KEY = '4c5da630d3f71542b3113c07bd146ed6';
-        const GEMINI_API_KEY = ''; 
+        const GEMINI_API_KEY = 'AIzaSyD5wt_t4-A6bx7f3pw6D9F0EdUeFXCRQSQ'; 
 
         // --- 2. DECLARE ALL VARIABLES ---
         let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCaloriesSpan,
@@ -817,33 +817,23 @@
         }
 
         async function fetchHealthDataSummary() {
-             if (!currentUserId) return;
-
             // Fetch last 7 days of calorie logs
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(endDate.getDate() - 6);
-            
-            const logsRef = collection(db, `artifacts/${appId}/public/data/${currentUserId}/logs`);
-            const qLogs = query(logsRef, where('__name__', '>=', startDate.toISOString().split('T')[0]));
-            const logSnapshot = await getDocs(qLogs);
-            
             let calorieHistory = "Recent calorie history:\n";
-            logSnapshot.forEach(doc => {
-                const items = doc.data().items || {};
+            for (let i = 0; i < 7; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+                const savedLog = localStorage.getItem(`log_${dateString}`);
+                const items = savedLog ? JSON.parse(savedLog) : {};
                 const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
-                calorieHistory += `- ${doc.id}: ${total} kcal\n`;
-            });
-
+                calorieHistory += `- ${dateString}: ${total} kcal\n`;
+            }
+            
             // Fetch weight history
-            const weightRef = collection(db, `artifacts/${appId}/public/data/${currentUserId}/weightLogs`);
-            const qWeight = query(weightRef);
-            const weightSnapshot = await getDocs(qWeight);
-
+            const savedWeightHistory = localStorage.getItem('weightHistory');
+            const weights = savedWeightHistory ? JSON.parse(savedWeightHistory) : [];
             let weightHistory = "Recent weight history:\n";
-            const weights = [];
-            weightSnapshot.forEach(doc => weights.push(doc.data()));
-            weights.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(w => {
+            weights.forEach(w => {
                 weightHistory += `- ${w.date}: ${w.weight} kg\n`;
             });
             
