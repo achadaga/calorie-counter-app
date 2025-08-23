@@ -357,9 +357,20 @@
         }
 
         // --- LOCAL STORAGE DATA HANDLING ---
+        function getTodaysDateEDT() {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/New_York',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            return formatter.format(now);
+        }
+
         function getTodaysLog() {
             logLoader.classList.remove('hidden');
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodaysDateEDT();
             const savedLog = localStorage.getItem(`log_${today}`);
             dailyItems = savedLog ? JSON.parse(savedLog) : {};
             renderLog();
@@ -374,7 +385,7 @@
         }
 
         function saveData() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodaysDateEDT();
             localStorage.setItem(`log_${today}`, JSON.stringify(dailyItems));
             localStorage.setItem('weightHistory', JSON.stringify(weightHistoryData));
         }
@@ -404,7 +415,7 @@
         }
 
         function logWeightToDB(weight) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodaysDateEDT();
             const todayEntryIndex = weightHistoryData.findIndex(entry => entry.date === today);
             if (todayEntryIndex > -1) {
                 weightHistoryData[todayEntryIndex].weight = parseFloat(weight);
@@ -435,7 +446,7 @@
             for (let i = 0; i < days; i++) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                const dateString = d.toISOString().split('T')[0];
+                const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
                 const savedLog = localStorage.getItem(`log_${dateString}`);
                 const items = savedLog ? JSON.parse(savedLog) : {};
                 const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
