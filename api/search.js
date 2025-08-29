@@ -35,9 +35,15 @@ export default async function handler(request, response) {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
-            // The 'query' object from the request is the entire payload for Gemini.
-            // We pass it directly without wrapping it again. This is the corrected part.
-            const payload = query;
+            // FIX: This section now correctly handles both simple prompts and full conversation objects.
+            let payload;
+            if (typeof query === 'string') {
+                // If the request is a simple string (from "Get Advice"), wrap it correctly.
+                payload = { contents: [{ parts: [{ text: query }] }] };
+            } else {
+                // Otherwise, assume it's the full conversational payload from the chatbot.
+                payload = query;
+            }
 
             const apiResponse = await fetch(apiUrl, {
                 method: 'POST',
