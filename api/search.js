@@ -19,7 +19,6 @@ export default async function handler(request, response) {
         try {
             const apiResponse = await fetch(url);
             if (!apiResponse.ok) {
-                // Forward the error from the Edamam API
                 const errorData = await apiResponse.json();
                 return response.status(apiResponse.status).json(errorData);
             }
@@ -36,11 +35,16 @@ export default async function handler(request, response) {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
+            // The 'query' object from the request is the entire payload for Gemini.
+            // We pass it directly without wrapping it again. This is the corrected part.
+            const payload = query;
+
             const apiResponse = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: query }] }] })
+                body: JSON.stringify(payload)
             });
+
             if (!apiResponse.ok) {
                 const errorData = await apiResponse.json();
                 return response.status(apiResponse.status).json(errorData);
@@ -55,3 +59,4 @@ export default async function handler(request, response) {
     // If the request type is not 'food' or 'ai', return an error
     return response.status(400).json({ error: 'Invalid request type' });
 }
+
