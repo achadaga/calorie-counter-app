@@ -260,6 +260,7 @@
         let calorieHistoryChart = null;
         let weightHistoryChart = null;
         let healthDataSummary = "No data available yet.";
+        let chatHistory = []; // <-- NEW: To store conversation history
 
         // --- 2. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -345,6 +346,10 @@
             welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
             goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
             calorieTargetSpan.textContent = userProfile.calorieTarget;
+            
+            // Initialize chat history with the AI's first message
+            const initialAiMessage = "Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?";
+            chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
 
             getTodaysLog();
             getWeightHistory();
@@ -735,6 +740,7 @@
             if (!userMessage) return;
 
             appendMessage(userMessage, 'user');
+            chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
             chatInput.value = '';
             chatSendBtn.disabled = true;
 
@@ -744,23 +750,34 @@
 
             await fetchHealthDataSummary();
 
-            const prompt = `
-                You are a friendly and encouraging AI nutrition coach...
-                ... [rest of the prompt]
+            const systemInstruction = `
+                You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine.
+                The user is predominantly vegetarian but also eats eggs, tofu, and shrimp for protein.
+                Here is the user's current health data summary, which you should use as context for your answers:
+                ${healthDataSummary}
+                Keep your responses conversational and focused on their questions.
             `;
 
             try {
+                const payload = {
+                    contents: chatHistory,
+                    systemInstruction: {
+                        parts: [{ text: systemInstruction }]
+                    }
+                };
+                
                 const response = await fetch('/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'ai', query: prompt })
+                    body: JSON.stringify({ type: 'ai', query: payload }) // Pass the whole payload
                 });
                 
                 if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
                 
                 const result = await response.json();
                 const aiResponse = result.candidates[0].content.parts[0].text;
-                aiBubble.innerHTML = `<p>${aiResponse}</p>`;
+                chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
+                aiBubble.innerHTML = `<p>${aiResponse}</p>`; // Replace loader with response
             } catch (error) {
                 console.error("Gemini API error:", error);
                 aiBubble.innerHTML = `<p>Sorry, I'm having trouble connecting right now. Please try again in a moment.</p>`;
@@ -831,3 +848,4 @@
     </script>
 </body>
 </html>
+
