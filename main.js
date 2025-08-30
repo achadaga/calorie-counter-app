@@ -1,7 +1,7 @@
 // --- 1. DECLARE ALL VARIABLES ---
 let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCaloriesSpan,
     calorieTargetSpan, calorieProgressBar, logLoader, emptyLogMessage,
-    themeToggleButton, lightIcon, darkIcon, historyBtns, calorieChartLoader,
+    themeSwitch, historyBtns, calorieChartLoader,
     calorieChartContainer, aiResponseEl, getAiTipBtn, aiLoader, weightInput,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay, goalDateDisplay,
     weightChartLoader, weightChartContainer, welcomeMessage, manualNameInput,
@@ -36,9 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calorieProgressBar = document.getElementById('calorie-progress-bar');
     logLoader = document.getElementById('log-loader');
     emptyLogMessage = document.getElementById('empty-log-message');
-    themeToggleButton = document.getElementById('theme-toggle');
-    lightIcon = document.getElementById('theme-toggle-light-icon');
-    darkIcon = document.getElementById('theme-toggle-dark-icon');
+    themeSwitch = document.getElementById('theme-switch');
     historyBtns = document.querySelectorAll('.history-btn');
     calorieChartLoader = document.getElementById('calorie-chart-loader');
     calorieChartContainer = document.getElementById('calorieChartContainer');
@@ -64,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatSendBtn = document.getElementById('chat-send-btn');
 
     // Set up event listeners
-    themeToggleButton.addEventListener('click', handleThemeToggle);
+    themeSwitch.addEventListener('change', handleThemeToggle);
     historyBtns.forEach(btn => btn.addEventListener('click', () => handleHistoryButtonClick(btn)));
     logWeightBtn.addEventListener('click', handleLogWeight);
     getAiTipBtn.addEventListener('click', getAICoachTip);
@@ -83,20 +81,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- THEME TOGGLE LOGIC ---
 function handleThemeToggle() {
-    document.documentElement.classList.toggle('dark');
-    localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-    updateThemeIcon();
+    if (themeSwitch.checked) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    }
     if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
     if (weightHistoryChart) updateChartAppearance(weightHistoryChart, true);
 }
 
-function updateThemeIcon() {
+function initializeTheme() {
     if (document.documentElement.classList.contains('dark')) {
-        lightIcon.classList.remove('hidden');
-        darkIcon.classList.add('hidden');
+        themeSwitch.checked = true;
     } else {
-        lightIcon.classList.add('hidden');
-        darkIcon.classList.remove('hidden');
+        themeSwitch.checked = false;
     }
 }
 
@@ -109,7 +109,8 @@ function initializeAppData() {
     
     const initialAiMessage = "Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?";
     chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
-
+    
+    initializeTheme();
     getTodaysLog();
     getWeightHistory();
     fetchCalorieHistory(7);
