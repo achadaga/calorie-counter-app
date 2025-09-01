@@ -1,77 +1,33 @@
-/* Custom styles to complement Tailwind */
+/* Custom styles to complement Tailwind's utility classes */
 body {
-    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
 }
 
-/* Simple loading spinner animation */
-.loader {
-    border: 4px solid #f3f3f3; /* Light grey */
-    border-top: 4px solid #3498db; /* Blue */
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-}
-.dark .loader {
-    border-color: #4a5568; /* dark:border-gray-600 */
-    border-top-color: #60a5fa; /* dark:border-blue-400 */
-}
-.chat-loader {
-     border: 2px solid #f3f3f3;
-    border-top: 2px solid #3498db;
-    width: 20px;
-    height: 20px;
-}
-.dark .chat-loader {
-    border-color: #4a5568;
-    border-top-color: #60a5fa;
+.tab-btn.active {
+    color: #86A789; /* brand-primary */
+    background-color: #D2E3C8; /* brand-secondary */
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+html.dark .tab-btn.active {
+    color: #A8D08D; /* dark-primary */
+    background-color: #607d8b; /* dark-secondary */
 }
 
-/* Ensure chart is responsive */
-.chart-container {
-    position: relative;
-    height: 40vh;
-    width: 100%;
+/* Glassmorphism effect for the navigation bar */
+nav {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
-/* Floating Action Button for AI Chat */
-#open-chat-btn {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    width: 60px;
-    height: 60px;
-    border-radius: 9999px; /* fully rounded */
-    background-color: #2563eb; /* Tailwind blue-600 */
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    z-index: 40;
-    transition: transform 0.2s ease-in-out;
-    animation: bounce 2s infinite;
+.achievement-badge {
+    opacity: 0.5;
+    filter: grayscale(80%);
+    transition: all 0.3s ease-in-out;
 }
 
-#open-chat-btn:hover {
-    transform: scale(1.1);
-    animation-play-state: paused;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-15px);
-  }
-  60% {
-    transform: translateY(-10px);
-  }
+.achievement-badge.unlocked {
+    opacity: 1;
+    filter: grayscale(0%);
+    transform: scale(1.05);
 }
 
