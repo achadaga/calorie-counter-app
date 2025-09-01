@@ -19,6 +19,7 @@ export default async function handler(request, response) {
         try {
             const apiResponse = await fetch(url);
             if (!apiResponse.ok) {
+                // Forward the error from the Edamam API
                 const errorData = await apiResponse.json();
                 return response.status(apiResponse.status).json(errorData);
             }
@@ -65,4 +66,3 @@ export default async function handler(request, response) {
     // If the request type is not 'food' or 'ai', return an error
     return response.status(400).json({ error: 'Invalid request type' });
 }
-
