@@ -3,28 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Calorie Counter</title>
+    <title>Wellness Journey</title>
     
-    <!-- Tailwind CSS for styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- **FIX**: Configure Tailwind to use class-based dark mode -->
     <script>
         tailwind.config = {
-            darkMode: 'class'
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-bg': '#FBF9F6',
+                        'brand-surface': '#FFFFFF',
+                        'brand-primary': '#86A789',
+                        'brand-secondary': '#D2E3C8',
+                        'brand-text': '#4F6F52',
+                        'brand-subtle': '#E9E5E0',
+                        'dark-bg': '#2C3333',
+                        'dark-surface': '#393E46',
+                        'dark-primary': '#A8D08D',
+                        'dark-secondary': '#607d8b',
+                        'dark-text': '#EAEAEA',
+                        'dark-subtle': '#4A5568',
+                    }
+                }
+            },
+            darkMode: 'class' // Enable manual dark mode
         }
     </script>
     
-    <!-- Google Fonts: Inter -->
+    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Chart.js and Annotation Plugin -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.4.0/chartjs-plugin-annotation.min.js"></script>
 
-    <!-- Link to external stylesheet -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
 
     <script>
@@ -36,181 +51,93 @@
         }
     </script>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+<body class="bg-brand-bg dark:bg-dark-bg text-brand-text dark:text-dark-text font-[Poppins] transition-colors duration-300">
 
-    <!-- AI Chat Modal -->
-    <div id="ai-chat-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center p-4 z-50 hidden">
-        <div class="flex flex-col h-full max-h-[90vh] w-full max-w-2xl bg-white dark:bg-gray-800 shadow-lg rounded-2xl">
-            <!-- Header -->
-            <header class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">AI Nutritionist</h1>
-                <button id="close-chat-btn" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </header>
-
-            <!-- Chat Messages -->
-            <div id="chat-container" class="flex-1 p-6 overflow-y-auto space-y-4">
-                <!-- Initial AI Message -->
-                <div class="flex items-start gap-3">
-                    <div class="bg-blue-500 text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">A</div>
-                    <div class="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
-                        <p>Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Message Input -->
-            <footer class="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex items-center gap-2">
-                    <input type="text" id="chat-input" placeholder="Ask a question..." class="w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
-                    <button id="chat-send-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                    </button>
-                </div>
-            </footer>
-        </div>
-    </div>
-
-
-    <div id="main-container" class="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
-        
-        <!-- NEW THEME TOGGLE SECTION -->
-        <div class="flex justify-center mb-8">
-            <label for="theme-switch" class="flex items-center cursor-pointer">
-                <!-- sun icon -->
-                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                <div class="relative mx-3">
-                    <input type="checkbox" id="theme-switch" class="sr-only peer">
-                    <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
-                    <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform peer-checked:translate-x-full peer-checked:bg-blue-600"></div>
-                </div>
-                <!-- moon icon -->
-                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-            </label>
-        </div>
+    <div id="main-container" class="container mx-auto max-w-lg p-4 pb-24">
 
         <!-- Header -->
-        <header class="text-center mb-8 relative">
-            <h1 id="welcome-message" class="text-4xl font-bold text-gray-900 dark:text-white">Smart Calorie Counter</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Your personal AI-powered nutrition assistant.</p>
+        <header class="text-center my-6">
+            <h1 class="text-3xl font-bold text-brand-text dark:text-dark-text">Your Wellness Journey</h1>
         </header>
 
-        <!-- Main App Body -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg space-y-8">
-            <!-- All app content -->
-            <div class="ai-coach-section">
-                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">AI Coach</h2>
-                 <div id="ai-response-container" class="p-4 bg-blue-50 dark:bg-gray-700 rounded-lg min-h-[100px] flex items-center justify-center">
-                     <p id="ai-response" class="text-gray-700 dark:text-gray-300 italic">Click the button below for a personalized tip on healthy Indian eating!</p>
-                     <div id="ai-loader" class="loader hidden"></div>
-                 </div>
-                 <button id="get-ai-tip-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition">
-                     Get Advice
-                 </button>
-            </div>
-
-            <div class="search-section">
-                <label for="searchInput" class="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Food</label>
-                <div class="relative">
-                    <input type="text" id="searchInput" placeholder="e.g., '1 cup rice' or 'samosa'" class="w-full p-4 pr-12 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder-gray-500 dark:placeholder-gray-400">
-                    <div id="search-loader" class="loader absolute right-4 top-1/2 -translate-y-1/2 hidden"></div>
-                </div>
-                <div id="searchResults" class="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md max-h-64 overflow-y-auto"></div>
-            </div>
+        <!-- Main Content Area -->
+        <main id="app-content" class="space-y-6">
             
-            <div class="manual-add-section">
-                <label class="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Quick Calories</label>
-                <div class="flex gap-2">
-                    <input type="text" id="manualNameInput" placeholder="Optional name" class="w-2/5 p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
-                    <input type="number" id="manualCaloriesInput" placeholder="Calories" class="w-2/5 p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500">
-                    <button id="add-manual-btn" class="w-1/5 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition">Add</button>
-                </div>
-            </div>
-
-            <div class="log-section">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Today's Log</h2>
-                <div id="log-loader" class="flex justify-center p-4">
-                    <div class="loader"></div>
-                </div>
-                <ul id="dailyLog" class="space-y-3"></ul>
-                <div id="empty-log-message" class="text-center py-8 text-gray-500 dark:text-gray-400 hidden">
-                    <p>Log your first meal to get started!</p>
-                </div>
-                <div class="total-calories mt-6 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xl font-semibold text-gray-700 dark:text-gray-300">Total / Goal</span>
-                        <div>
-                            <span id="totalCalories" class="text-3xl font-bold text-blue-600 dark:text-blue-400">0</span>
-                            <span class="text-xl text-gray-500 dark:text-gray-400"> / </span>
-                            <span id="calorieTarget" class="text-3xl font-bold text-gray-500 dark:text-gray-400">...</span>
+            <!-- TODAY TAB CONTENT (Initially visible) -->
+            <div id="today-tab-content" class="tab-content">
+                <!-- Daily Goal Card -->
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Today's Goal</h2>
+                        <div id="streak-counter" class="flex items-center gap-2 text-amber-500 font-semibold">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.267 3.193a1 1 0 011.414 0l.243.243a1 1 0 00.707.293h.343a1 1 0 011 1v.343a1 1 0 00.293.707l.243.243a1 1 0 010 1.414l-.243.243a1 1 0 00-.293.707v.343a1 1 0 01-1 1h-.343a1 1 0 00-.707.293l-.243.243a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5zM5.5 12.5a1 1 0 100-2 1 1 0 000 2zM3 8.5a1 1 0 100-2 1 1 0 000 2zM8 5.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /><path d="M12.828 7.172a1 1 0 00-1.414 0L4.707 13.879a1 1 0 101.414 1.414L12.828 8.586a1 1 0 000-1.414z" /></svg>
+                            <span id="streak-days">3 Day Streak!</span>
                         </div>
                     </div>
-                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
-                        <div id="calorie-progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    <div class="relative w-48 h-48 mx-auto">
+                        <svg class="w-full h-full" viewBox="0 0 36 36">
+                            <path class="text-brand-secondary dark:text-dark-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+                            <path id="calorie-progress-circle" class="text-brand-primary dark:text-dark-primary transition-all duration-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round"></path>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                            <span id="totalCalories" class="text-4xl font-bold">1250</span>
+                            <span class="text-sm">/</span>
+                            <span id="calorieTarget" class="text-sm">1850 Kcal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Your Food Card -->
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Log Your Food</h2>
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search for food..." class="w-full p-3 pl-10 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-primary">
+                        <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <div id="searchResults" class="mt-2"></div>
+                </div>
+            </div>
+
+            <!-- DASHBOARD TAB CONTENT -->
+            <div id="dashboard-tab-content" class="tab-content hidden">
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Your Progress</h2>
+                    <div class="chart-container">
+                        <canvas id="weightHistoryChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="weight-tracking-section">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Weight Progress</h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-center mb-4">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Current</p>
-                        <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
+            <!-- COACH TAB CONTENT -->
+            <div id="coach-tab-content" class="tab-content hidden">
+                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Achievements</h2>
+                    <div class="grid grid-cols-3 gap-4 text-center" id="achievements-grid">
+                        <!-- Achievements will be dynamically inserted here -->
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Goal</p>
-                        <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="goal-weight-display">-- kg</p>
-                    </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Est. Goal Date</p>
-                        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="goal-date-display">...</p>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <input type="number" id="weightInput" step="0.1" placeholder="Enter weight in kg" class="w-full p-3 text-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder-gray-500 dark:placeholder-gray-400">
-                    <button id="log-weight-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition">Log</button>
-                </div>
-                <div id="weightChartContainer" class="chart-container mt-4">
-                    <canvas id="weightChart"></canvas>
-                </div>
-                <div id="weight-chart-loader" class="flex justify-center p-4 hidden">
-                    <div class="loader"></div>
                 </div>
             </div>
-            
-            <div class="history-section">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">Calorie History</h2>
-                <div class="flex justify-center space-x-2 sm:space-x-4 mb-4">
-                    <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">7 Days</button>
-                    <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">15 Days</button>
-                    <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">30 Days</button>
-                </div>
-                <div id="calorieChartContainer" class="chart-container">
-                    <canvas id="calorieHistoryChart"></canvas>
-                </div>
-                 <div id="calorie-chart-loader" class="flex justify-center p-4 hidden">
-                    <div class="loader"></div>
-                </div>
-            </div>
-        </div>
+
+        </main>
+
     </div>
-    
-    <!-- Floating AI Chat Button -->
-    <button id="open-chat-btn" title="Open AI Chat">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-           <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-           <path d="M7 7h10a2 2 0 0 1 2 2v1l1 1v3l-1 1v3a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-3l-1 -1v-3l1 -1v-1a2 2 0 0 1 2 -2z"></path>
-           <path d="M10 16h4"></path>
-           <circle cx="8.5" cy="11.5" r=".5" fill="currentColor"></circle>
-           <circle cx="15.5" cy="11.5" r=".5" fill="currentColor"></circle>
-        </svg>
-    </button>
-    
-    <!-- Main App Logic -->
-    <script src="main.js"></script>
 
+    <!-- Tab Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/70 dark:bg-black/70 backdrop-blur-lg border-t border-brand-subtle dark:border-dark-subtle rounded-t-3xl shadow-2xl">
+        <div class="flex justify-around p-2">
+            <button data-tab="today" class="tab-btn p-3 rounded-xl text-brand-primary dark:text-dark-primary bg-brand-secondary dark:bg-dark-secondary">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            </button>
+            <button data-tab="dashboard" class="tab-btn p-3 rounded-xl text-gray-400">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0h6M9 9l2-2m2 2l2-2m-2 2v10m-6-10a2 2 0 012-2h2a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6z"></path></svg>
+            </button>
+            <button data-tab="coach" class="tab-btn p-3 rounded-xl text-gray-400">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+        </div>
+    </nav>
+    
+    <script src="main.js"></script>
 </body>
 </html>
 
