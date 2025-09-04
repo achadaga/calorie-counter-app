@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     logWeightBtn = document.getElementById('log-weight-btn');
     currentWeightDisplay = document.getElementById('current-weight-display');
     goalWeightDisplay = document.getElementById('goal-weight-display');
-    weightChartContainer = document.getElementById('weightHistoryChart');
-    calorieHistoryChart = document.getElementById('calorieHistoryChart');
+    weightChartContainer = document.getElementById('weightHistoryChart'); 
+    calorieChartContainer = document.getElementById('calorieHistoryChart');
     achievementsGrid = document.getElementById('achievements-grid');
     streakDays = document.getElementById('streak-days');
     streakCounter = document.getElementById('streak-counter');
@@ -522,7 +522,6 @@ async function handleChatSend() {
     chatInput.value = '';
     chatSendBtn.disabled = true;
 
-    // Show AI typing indicator
     const typingId = `typing-${Date.now()}`;
     appendMessage(`<div class="typing-loader" id="${typingId}"><span></span><span></span><span></span></div>`, 'ai');
 
@@ -549,7 +548,6 @@ async function handleChatSend() {
         const result = await response.json();
         const aiResponse = result.candidates[0].content.parts[0].text;
         
-        // Remove typing indicator and add final response
         document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
         appendMessage(aiResponse, 'ai');
         chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
@@ -565,7 +563,7 @@ async function handleChatSend() {
 }
 
 function handleOpenChat() {
-    chatContainer.innerHTML = ''; // Clear and rebuild the chat history
+    chatContainer.innerHTML = ''; 
     chatHistory.forEach(msg => {
         const sender = msg.role === 'user' ? 'user' : 'ai';
         const message = msg.parts[0].text;
