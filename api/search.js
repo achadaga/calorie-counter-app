@@ -19,7 +19,6 @@ export default async function handler(request, response) {
         try {
             const apiResponse = await fetch(url);
             if (!apiResponse.ok) {
-                // Forward the error from the Edamam API
                 const errorData = await apiResponse.json();
                 return response.status(apiResponse.status).json(errorData);
             }
@@ -36,15 +35,8 @@ export default async function handler(request, response) {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
-            // FIX: This section now correctly handles both simple prompts and full conversation objects.
-            let payload;
-            if (typeof query === 'string') {
-                // If the request is a simple string (from "Get Advice"), wrap it correctly.
-                payload = { contents: [{ parts: [{ text: query }] }] };
-            } else {
-                // Otherwise, assume it's the full conversational payload from the chatbot.
-                payload = query;
-            }
+            // The 'query' object can be a simple string (for the coach) or a complex object (for the chat)
+            const payload = (typeof query === 'string') ? { contents: [{ parts: [{ text: query }] }] } : query;
 
             const apiResponse = await fetch(apiUrl, {
                 method: 'POST',
@@ -66,3 +58,4 @@ export default async function handler(request, response) {
     // If the request type is not 'food' or 'ai', return an error
     return response.status(400).json({ error: 'Invalid request type' });
 }
+
