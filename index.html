@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class', // This line enables manual dark mode toggling
             theme: {
                 extend: {
                     colors: {
@@ -26,8 +27,7 @@
                         'dark-subtle': '#4A5568',
                     }
                 }
-            },
-            darkMode: 'class' // Enable manual dark mode
+            }
         }
     </script>
     
@@ -56,8 +56,19 @@
     <div id="main-container" class="container mx-auto max-w-lg p-4 pb-24">
 
         <!-- Header -->
-        <header class="text-center my-6">
-            <h1 class="text-3xl font-bold text-brand-text dark:text-dark-text">Your Wellness Journey</h1>
+        <header class="text-center my-6 flex justify-between items-center">
+             <div class="w-1/3"></div>
+            <h1 class="text-3xl font-bold text-brand-text dark:text-dark-text w-1/3">Journey</h1>
+             <div class="w-1/3 flex justify-end">
+                <!-- Theme Toggle Switch -->
+                <label for="theme-toggle-switch" class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="theme-toggle-switch" class="sr-only">
+                        <div class="block bg-brand-subtle dark:bg-dark-subtle w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform dark:translate-x-6"></div>
+                    </div>
+                </label>
+            </div>
         </header>
 
         <!-- Main Content Area -->
@@ -69,9 +80,9 @@
                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold">Today's Goal</h2>
-                        <div id="streak-counter" class="flex items-center gap-2 text-amber-500 font-semibold">
+                        <div id="streak-counter" class="flex items-center gap-2 text-amber-500 font-semibold hidden">
                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.267 3.193a1 1 0 011.414 0l.243.243a1 1 0 00.707.293h.343a1 1 0 011 1v.343a1 1 0 00.293.707l.243.243a1 1 0 010 1.414l-.243.243a1 1 0 00-.293.707v.343a1 1 0 01-1 1h-.343a1 1 0 00-.707.293l-.243.243a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5zM5.5 12.5a1 1 0 100-2 1 1 0 000 2zM3 8.5a1 1 0 100-2 1 1 0 000 2zM8 5.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /><path d="M12.828 7.172a1 1 0 00-1.414 0L4.707 13.879a1 1 0 101.414 1.414L12.828 8.586a1 1 0 000-1.414z" /></svg>
-                            <span id="streak-days">3 Day Streak!</span>
+                            <span id="streak-days"></span>
                         </div>
                     </div>
                     <div class="relative w-48 h-48 mx-auto">
@@ -80,9 +91,9 @@
                             <path id="calorie-progress-circle" class="text-brand-primary dark:text-dark-primary transition-all duration-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round"></path>
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <span id="totalCalories" class="text-4xl font-bold">1250</span>
+                            <span id="totalCalories" class="text-4xl font-bold">0</span>
                             <span class="text-sm">/</span>
-                            <span id="calorieTarget" class="text-sm">1850 Kcal</span>
+                            <span id="calorieTarget" class="text-sm">... Kcal</span>
                         </div>
                     </div>
                 </div>
@@ -92,29 +103,80 @@
                     <h2 class="text-xl font-semibold mb-4">Log Your Food</h2>
                     <div class="relative">
                         <input type="text" id="searchInput" placeholder="Search for food..." class="w-full p-3 pl-10 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-primary">
-                        <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <div id="search-loader" class="loader absolute right-3 top-1/2 -translate-y-1/2 hidden" style="width:20px; height:20px; border-width:2px;"></div>
                     </div>
                     <div id="searchResults" class="mt-2"></div>
+                     <div class="mt-4">
+                        <p class="text-center text-sm text-gray-400 mb-2">Or Add Manually</p>
+                        <div class="flex gap-2">
+                             <input type="text" id="manualNameInput" placeholder="Optional name" class="w-2/5 p-3 text-sm bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
+                             <input type="number" id="manualCaloriesInput" placeholder="Calories" class="w-2/5 p-3 text-sm bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
+                             <button id="add-manual-btn" class="w-1/5 bg-brand-primary hover:bg-opacity-80 text-white font-bold rounded-lg transition">Add</button>
+                         </div>
+                    </div>
+                    <div id="daily-log-container" class="mt-6">
+                         <h3 class="text-lg font-semibold mb-3">Today's Log</h3>
+                         <div id="log-loader" class="flex justify-center hidden"><div class="loader"></div></div>
+                         <ul id="dailyLog" class="space-y-3"></ul>
+                         <p id="empty-log-message" class="text-center text-gray-500 py-4 hidden">No food logged yet.</p>
+                    </div>
                 </div>
             </div>
 
             <!-- DASHBOARD TAB CONTENT -->
-            <div id="dashboard-tab-content" class="tab-content hidden">
+            <div id="dashboard-tab-content" class="tab-content hidden space-y-6">
+                <!-- Weight Progress Card -->
                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Your Progress</h2>
+                    <h2 class="text-xl font-semibold mb-4">Weight Progress</h2>
+                     <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                        <div>
+                            <p class="text-sm">Current</p>
+                            <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
+                        </div>
+                        <div>
+                            <p class="text-sm">Goal</p>
+                            <p class="text-2xl font-bold" id="goal-weight-display">-- kg</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mb-4">
+                        <input type="number" id="weightInput" step="0.1" placeholder="Log today's weight" class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
+                        <button id="log-weight-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">Log</button>
+                    </div>
                     <div class="chart-container">
                         <canvas id="weightHistoryChart"></canvas>
+                    </div>
+                </div>
+                 <!-- Calorie History Card -->
+                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Calorie History</h2>
+                     <div class="flex justify-center space-x-2 mb-4">
+                        <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-brand-secondary dark:bg-dark-secondary">7 Days</button>
+                        <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">15 Days</button>
+                        <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">30 Days</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="calorieHistoryChart"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- COACH TAB CONTENT -->
-            <div id="coach-tab-content" class="tab-content hidden">
+            <div id="coach-tab-content" class="tab-content hidden space-y-6">
                  <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
                     <h2 class="text-xl font-semibold mb-4">Achievements</h2>
                     <div class="grid grid-cols-3 gap-4 text-center" id="achievements-grid">
                         <!-- Achievements will be dynamically inserted here -->
                     </div>
+                </div>
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">AI Coach</h2>
+                    <div id="ai-response-container" class="p-4 bg-brand-bg dark:bg-dark-bg rounded-lg min-h-[100px] flex items-center justify-center">
+                         <p id="ai-response" class="text-sm italic">Click below for a personalized tip!</p>
+                         <div id="ai-loader" class="loader hidden"></div>
+                     </div>
+                     <button id="get-ai-tip-btn" class="mt-4 w-full bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">
+                         Get Advice
+                     </button>
                 </div>
             </div>
 
@@ -122,22 +184,49 @@
 
     </div>
 
-    <!-- Tab Navigation -->
+    <!-- Floating Chat Button -->
+    <button id="open-chat-btn" class="chat-fab">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c.225-.01.45-.017.675-.017h3.5c.225 0 .45.007.675.017v5.714a2.25 2.25 0 01-.659 1.591L14.25 14.5M9.75 3.104a2.25 2.25 0 00-2.25 2.25v10.5a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-10.5a2.25 2.25 0 00-2.25-2.25h-3.5m-3.75 6.75h3.75"></path></svg>
+    </button>
+    
+    <!-- AI Chat Modal -->
+    <div id="ai-chat-modal" class="fixed inset-0 bg-black/60 flex flex-col items-center justify-center p-4 z-50 hidden">
+         <div class="flex flex-col h-full max-h-[90vh] w-full max-w-2xl bg-brand-surface dark:bg-dark-surface shadow-lg rounded-2xl">
+            <header class="p-4 border-b border-brand-subtle dark:border-dark-subtle flex items-center justify-between">
+                <h1 class="text-xl font-bold">AI Nutritionist</h1>
+                <button id="close-chat-btn" class="p-2 rounded-full hover:bg-brand-secondary dark:hover:bg-dark-secondary">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </header>
+            <div id="chat-container" class="flex-1 p-6 overflow-y-auto space-y-4"></div>
+            <footer class="p-4 border-t border-brand-subtle dark:border-dark-subtle">
+                <div class="flex items-center gap-2">
+                    <input type="text" id="chat-input" placeholder="Ask a question..." class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-primary">
+                    <button id="chat-send-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold p-3 rounded-lg transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+     <!-- Tab Navigation -->
     <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/70 dark:bg-black/70 backdrop-blur-lg border-t border-brand-subtle dark:border-dark-subtle rounded-t-3xl shadow-2xl">
         <div class="flex justify-around p-2">
-            <button data-tab="today" class="tab-btn p-3 rounded-xl text-brand-primary dark:text-dark-primary bg-brand-secondary dark:bg-dark-secondary">
+            <button data-tab="today" class="tab-btn p-3 rounded-xl">
                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             </button>
-            <button data-tab="dashboard" class="tab-btn p-3 rounded-xl text-gray-400">
+            <button data-tab="dashboard" class="tab-btn p-3 rounded-xl">
                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0h6M9 9l2-2m2 2l2-2m-2 2v10m-6-10a2 2 0 012-2h2a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6z"></path></svg>
             </button>
-            <button data-tab="coach" class="tab-btn p-3 rounded-xl text-gray-400">
+            <button data-tab="coach" class="tab-btn p-3 rounded-xl">
                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </button>
         </div>
     </nav>
-    
-    <script src="main.js"></script>
+
+
+    <script src="main.js" ></script>
 </body>
 </html>
 
