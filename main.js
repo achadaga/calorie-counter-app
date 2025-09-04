@@ -6,7 +6,7 @@ let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCalo
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     weightChartContainer, welcomeMessage, manualNameInput,
     manualCaloriesInput, addManualBtn, aiChatModal, openChatBtn, closeChatBtn,
-    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, tabButtons, tabContents;
+    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, streakCounter, tabButtons, tabContents;
 
 const userProfile = {
     name: 'User',
@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     weightChartContainer = document.getElementById('weightHistoryChart'); 
     achievementsGrid = document.getElementById('achievements-grid');
     streakDays = document.getElementById('streak-days');
+    streakCounter = document.getElementById('streak-counter');
     tabButtons = document.querySelectorAll('.tab-btn');
     tabContents = document.querySelectorAll('.tab-content');
     manualNameInput = document.getElementById('manualNameInput');
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', handleSearchInput);
     dailyLog.addEventListener('click', handleLogInteraction);
     addManualBtn.addEventListener('click', handleManualAdd);
-    openChatBtn.addEventListener('click', () => aiChatModal.classList.remove('hidden'));
+    openChatBtn.addEventListener('click', handleOpenChat);
     closeChatBtn.addEventListener('click', () => aiChatModal.classList.add('hidden'));
     chatSendBtn.addEventListener('click', handleChatSend);
     chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatSend(); });
@@ -160,12 +161,10 @@ function getTodaysDateEDT() {
 }
 
 function getTodaysLog() {
-    logLoader.classList.remove('hidden');
     const today = getTodaysDateEDT();
     const savedLog = localStorage.getItem(`log_${today}`);
     dailyItems = savedLog ? JSON.parse(savedLog) : {};
     renderLog();
-    logLoader.classList.add('hidden');
 }
 
 function getWeightHistory() {
@@ -369,7 +368,7 @@ function calculateStreak() {
         if (log && Object.keys(JSON.parse(log)).length > 0) {
             streak++;
         } else {
-            break;
+            if (i > 0) break; 
         }
     }
     return streak;
@@ -567,6 +566,17 @@ async function handleChatSend() {
     }
 }
 
+function handleOpenChat() {
+    chatContainer.innerHTML = ''; // Clear previous messages
+    chatHistory.forEach(msg => {
+        const sender = msg.role === 'user' ? 'user' : 'ai';
+        const message = msg.parts[0].text;
+        appendMessage(message, sender);
+    });
+    aiChatModal.classList.remove('hidden');
+}
+
+
 function appendMessage(message, sender) {
     const messageDiv = document.createElement('div');
     if (sender === 'user') {
@@ -591,7 +601,7 @@ function appendMessage(message, sender) {
 }
 
 async function fetchHealthDataSummary() {
-    let calorieHistory = "Recent calorie history:\n";
+    let calorieHistoryText = "Recent calorie history:\n";
     for (let i = 0; i < 7; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
@@ -599,14 +609,14 @@ async function fetchHealthDataSummary() {
         const savedLog = localStorage.getItem(`log_${dateString}`);
         const items = savedLog ? JSON.parse(savedLog) : {};
         const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
-        calorieHistory += `- ${dateString}: ${total} kcal\n`;
+        calorieHistoryText += `- ${dateString}: ${total} kcal\n`;
     }
     
     const savedWeightHistory = localStorage.getItem('weightHistory');
     const weights = savedWeightHistory ? JSON.parse(savedWeightHistory) : [];
-    let weightHistory = "Recent weight history:\n";
+    let weightHistoryText = "Recent weight history:\n";
     weights.forEach(w => {
-        weightHistory += `- ${w.date}: ${w.weight} kg\n`;
+        weightHistoryText += `- ${w.date}: ${w.weight} kg\n`;
     });
     
     const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : userProfile.startWeight;
@@ -619,8 +629,8 @@ async function fetchHealthDataSummary() {
         - Goal Weight: ${userProfile.goalWeight} kg
         - Daily Calorie Target: ${userProfile.calorieTarget} kcal
         
-        ${calorieHistory}
-        ${weightHistory}
+        ${calorieHistoryText}
+        ${weightHistoryText}
     `;
 }
 
