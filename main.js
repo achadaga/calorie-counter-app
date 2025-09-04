@@ -38,8 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyLogMessage = document.getElementById('empty-log-message');
     themeToggleSwitch = document.getElementById('theme-toggle-switch');
     historyBtns = document.querySelectorAll('.history-btn');
-    calorieChartLoader = document.getElementById('calorie-chart-loader');
-    calorieChartContainer = document.getElementById('calorieChartContainer');
     aiResponseEl = document.getElementById('ai-response');
     getAiTipBtn = document.getElementById('get-ai-tip-btn');
     aiLoader = document.getElementById('ai-loader');
@@ -47,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     logWeightBtn = document.getElementById('log-weight-btn');
     currentWeightDisplay = document.getElementById('current-weight-display');
     goalWeightDisplay = document.getElementById('goal-weight-display');
-    weightChartContainer = document.getElementById('weightHistoryChart'); 
+    weightChartContainer = document.getElementById('weightHistoryChart');
+    calorieHistoryChart = document.getElementById('calorieHistoryChart');
     achievementsGrid = document.getElementById('achievements-grid');
     streakDays = document.getElementById('streak-days');
     streakCounter = document.getElementById('streak-counter');
@@ -393,7 +392,7 @@ async function getAICoachTip() {
 
     await fetchHealthDataSummary();
 
-    const prompt = `You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine. The user's health data summary is: ${healthDataSummary}. Based on this data, provide a short (2-4 sentences), motivational, and practical tip. Your advice must focus on one of these topics: a low-calorie Indian meal, a protein-rich shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
+    const prompt = `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip (2-4 sentences) about a low-calorie Indian meal, a protein shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
 
     try {
         const response = await fetch('/api/search', {
@@ -524,8 +523,8 @@ async function handleChatSend() {
     chatSendBtn.disabled = true;
 
     // Show AI typing indicator
-    appendMessage('<div class="loader chat-loader"></div>', 'ai');
-    const aiBubble = chatContainer.querySelector('.ai-message-bubble:last-child');
+    const typingId = `typing-${Date.now()}`;
+    appendMessage(`<div class="typing-loader" id="${typingId}"><span></span><span></span><span></span></div>`, 'ai');
 
     await fetchHealthDataSummary();
 
@@ -549,11 +548,16 @@ async function handleChatSend() {
         
         const result = await response.json();
         const aiResponse = result.candidates[0].content.parts[0].text;
+        
+        // Remove typing indicator and add final response
+        document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
+        appendMessage(aiResponse, 'ai');
         chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
-        aiBubble.innerHTML = `<p>${aiResponse}</p>`;
+
     } catch (error) {
         console.error("Gemini API error:", error);
-        aiBubble.innerHTML = `<p>Sorry, I'm having trouble connecting right now. Please try again.</p>`;
+        document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
+        appendMessage("Sorry, I'm having trouble connecting right now. Please try again.", 'ai');
     } finally {
         chatSendBtn.disabled = false;
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -561,7 +565,7 @@ async function handleChatSend() {
 }
 
 function handleOpenChat() {
-    chatContainer.innerHTML = ''; // Clear previous messages
+    chatContainer.innerHTML = ''; // Clear and rebuild the chat history
     chatHistory.forEach(msg => {
         const sender = msg.role === 'user' ? 'user' : 'ai';
         const message = msg.parts[0].text;
@@ -572,25 +576,27 @@ function handleOpenChat() {
 
 
 function appendMessage(message, sender) {
-    const messageDiv = document.createElement('div');
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
+    
     if (sender === 'user') {
-        messageDiv.className = 'flex items-start gap-3 justify-end';
-        messageDiv.innerHTML = `
-            <div class="bg-brand-primary text-white p-4 rounded-lg rounded-br-none max-w-xs md:max-w-md">
+        messageWrapper.classList.add('justify-end');
+        messageWrapper.innerHTML = `
+            <div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-xs md:max-w-md message-bubble">
                 <p>${message}</p>
             </div>
-            <div class="bg-brand-subtle dark:bg-dark-subtle text-brand-text dark:text-dark-text p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">U</div>
+            <div class="bg-brand-subtle dark:bg-dark-subtle text-brand-text dark:text-dark-text p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">U</div>
         `;
     } else { // AI
-        messageDiv.className = 'flex items-start gap-3';
-        messageDiv.innerHTML = `
-            <div class="bg-brand-primary text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">A</div>
-            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
+        messageWrapper.classList.add('justify-start');
+        messageWrapper.innerHTML = `
+            <div class="bg-brand-primary text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">A</div>
+            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-xs md:max-w-md message-bubble">
                 ${message}
             </div>
         `;
     }
-    chatContainer.appendChild(messageDiv);
+    chatContainer.appendChild(messageWrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
