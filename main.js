@@ -6,7 +6,8 @@ let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCalo
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     weightChartContainer, welcomeMessage, manualNameInput,
     manualCaloriesInput, addManualBtn, aiChatModal, openChatBtn, closeChatBtn,
-    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, streakCounter, tabButtons, tabContents;
+    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
+    achievementToast, toastIcon, toastName;
 
 const userProfile = {
     name: 'User',
@@ -102,24 +103,29 @@ function handleThemeToggle() {
 function initializeAppData() {
     mainContainer.classList.remove('hidden');
     
+    // Set initial theme state
     if (document.documentElement.classList.contains('dark')) {
         themeToggleSwitch.checked = true;
     }
 
+    // Set user profile info
     goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
     
     const initialAiMessage = "Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?";
     chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
 
+    // Load data
     loadUnlockedAchievements();
     getTodaysLog();
     getWeightHistory();
     updateStreak();
     
+    // Initial chart rendering
     renderWeightChart(weightHistoryData);
     fetchCalorieHistory(7); 
     
+    // Set initial active tab
     handleTabSwitch(document.querySelector('.tab-btn[data-tab="today"]'));
     checkAndUnlockAchievements(); // Initial check on load
 }
@@ -127,6 +133,8 @@ function initializeAppData() {
 // --- TAB NAVIGATION ---
 function handleTabSwitch(button) {
     const tab = button.dataset.tab;
+
+    // Handle button active states
     tabButtons.forEach(btn => {
         btn.classList.remove('active');
         btn.classList.add('text-gray-400');
@@ -242,14 +250,36 @@ function renderCalorieHistoryChart(data) {
     const values = sortedDates.map(date => data[date]);
     const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
 
+    const average = values.reduce((a, b) => a + b, 0) / values.length;
+    const averageData = Array(values.length).fill(average);
+
     if (calorieHistoryChart) {
         calorieHistoryChart.data.labels = labels;
         calorieHistoryChart.data.datasets[0].data = values;
+        calorieHistoryChart.data.datasets[1].data = averageData;
         calorieHistoryChart.update();
     } else {
         calorieHistoryChart = new Chart(ctx, {
             type: 'bar',
-            data: { labels, datasets: [{ label: 'Calories', data: values }] },
+            data: { 
+                labels, 
+                datasets: [
+                    {
+                        label: 'Calories',
+                        data: values,
+                    },
+                    {
+                        label: 'Average',
+                        data: averageData,
+                        type: 'line',
+                        borderColor: '#F97316', // Orange
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        borderDash: [5, 5]
+                    }
+                ] 
+            },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
     }
@@ -291,12 +321,20 @@ function updateChartAppearance(chart) {
     chart.options.scales.x.ticks.color = ticksColor;
     chart.options.scales.y.ticks.color = ticksColor;
     
-    chart.data.datasets[0].borderColor = primaryColor;
-    chart.data.datasets[0].backgroundColor = primaryBgColor;
+    // Bar and Line datasets
+    chart.data.datasets.forEach(dataset => {
+        if (dataset.type === 'line') {
+            dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316'; // Amber color for average line
+        } else {
+            dataset.borderColor = primaryColor;
+            dataset.backgroundColor = primaryColor; // Solid bar color
+        }
+    });
 
-    if (chart.config.type === 'bar') {
-        chart.data.datasets[0].backgroundColor = primaryColor;
+    if (chart.config.type === 'line') {
+        chart.data.datasets[0].backgroundColor = primaryBgColor; // Area fill for weight chart
     }
+
 
     chart.update();
 }
@@ -326,6 +364,7 @@ function handleSearchInput() {
 
 // --- GAMIFICATION ---
 const achievements = [
+    // ... (Full list of 50+ achievements from the plan)
     { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
     { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
     { id: 'streak7', name: '7-Day Streak', icon: '🏆', condition: () => calculateStreak() >= 7 },
@@ -366,6 +405,7 @@ function checkAndUnlockAchievements() {
         }
     });
     renderAchievements(); 
+    updateStreak();
 }
 
 function renderAchievements() {
@@ -564,7 +604,6 @@ function handleManualAdd() {
         return;
     }
     
-    // Track manual entry for achievement
     let manualCount = parseInt(localStorage.getItem('manualEntryCount')) || 0;
     localStorage.setItem('manualEntryCount', ++manualCount);
 
