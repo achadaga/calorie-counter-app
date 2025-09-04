@@ -22,6 +22,7 @@ let calorieHistoryChart = null;
 let weightHistoryChart = null;
 let healthDataSummary = "No data available yet.";
 let chatHistory = [];
+let unlockedAchievements = [];
 
 // --- 2. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -61,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
     chatContainer = document.getElementById('chat-container');
     chatInput = document.getElementById('chat-input');
     chatSendBtn = document.getElementById('chat-send-btn');
+    achievementToast = document.getElementById('achievement-toast');
+    toastIcon = document.getElementById('toast-icon');
+    toastName = document.getElementById('toast-name');
     
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
@@ -98,51 +102,39 @@ function handleThemeToggle() {
 function initializeAppData() {
     mainContainer.classList.remove('hidden');
     
-    // Set initial theme state
     if (document.documentElement.classList.contains('dark')) {
         themeToggleSwitch.checked = true;
     }
 
-    // Set user profile info
     goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
     
     const initialAiMessage = "Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?";
     chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
 
-    // Load data
+    loadUnlockedAchievements();
     getTodaysLog();
     getWeightHistory();
-    renderAchievements();
     updateStreak();
     
-    // Initial chart rendering
     renderWeightChart(weightHistoryData);
-    fetchCalorieHistory(7); // Fetch and render calorie chart
+    fetchCalorieHistory(7); 
     
-    // Set initial active tab
     handleTabSwitch(document.querySelector('.tab-btn[data-tab="today"]'));
+    checkAndUnlockAchievements(); // Initial check on load
 }
 
 // --- TAB NAVIGATION ---
 function handleTabSwitch(button) {
     const tab = button.dataset.tab;
-
-    // Handle button active states
     tabButtons.forEach(btn => {
         btn.classList.remove('active');
         btn.classList.add('text-gray-400');
     });
     button.classList.add('active');
     button.classList.remove('text-gray-400');
-
-    // Handle content visibility
     tabContents.forEach(content => {
-        if (content.id === `${tab}-tab-content`) {
-            content.classList.remove('hidden');
-        } else {
-            content.classList.add('hidden');
-        }
+        content.id === `${tab}-tab-content` ? content.classList.remove('hidden') : content.classList.add('hidden');
     });
 }
 
@@ -188,8 +180,7 @@ function addFoodToDB(foodItem) {
     }
     saveData();
     renderLog();
-    updateStreak();
-    renderAchievements();
+    checkAndUnlockAchievements();
 }
 
 function updateFoodQuantityInDB(foodId, newQuantity) {
@@ -216,7 +207,7 @@ function logWeightToDB(weight) {
     saveData();
     renderWeightChart(weightHistoryData);
     updateCurrentWeightDisplay();
-    renderAchievements();
+    checkAndUnlockAchievements();
     weightInput.value = '';
 }
 
@@ -334,18 +325,61 @@ function handleSearchInput() {
 }
 
 // --- GAMIFICATION ---
-function renderAchievements() {
-    const achievements = [
-        { id: 'log1', name: 'First Log', icon: '📝', unlocked: Object.keys(localStorage).some(k => k.startsWith('log_')) },
-        { id: 'streak3', name: '3-Day Streak', icon: '🔥', unlocked: calculateStreak() >= 3 },
-        { id: 'week1', name: 'First Week', icon: '📅', unlocked: Object.keys(localStorage).filter(k => k.startsWith('log_')).length >= 7 },
-        { id: 'lose1kg', name: 'Lost 1kg', icon: '💪', unlocked: weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 1 }
-    ];
+const achievements = [
+    { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
+    { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
+    { id: 'streak7', name: '7-Day Streak', icon: '🏆', condition: () => calculateStreak() >= 7 },
+    { id: 'streak14', name: '14-Day Streak', icon: '🏅', condition: () => calculateStreak() >= 14 },
+    { id: 'streak30', name: '30-Day Streak', icon: '🎉', condition: () => calculateStreak() >= 30 },
+    { id: 'week1', name: 'First Week', icon: '📅', condition: () => Object.keys(localStorage).filter(k => k.startsWith('log_')).length >= 7 },
+    { id: 'lose1kg', name: 'Lost 1kg', icon: '💪', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 1 },
+    { id: 'lose5kg', name: 'Lost 5kg', icon: '🎉', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 5 },
+    { id: 'halfway', name: 'Halfway There', icon: '🏁', condition: () => weightHistoryData.length > 0 && (userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight) >= (userProfile.startWeight - userProfile.goalWeight) / 2 },
+    { id: 'goal', name: 'Goal Getter', icon: '🥇', condition: () => weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight },
+    { id: 'weightLog1', name: 'First Weigh-in', icon: '⚖️', condition: () => weightHistoryData.length >= 1 },
+    { id: 'weightLog5', name: 'Consistent Weigher', icon: '📈', condition: () => weightHistoryData.length >= 5 },
+    { id: 'perfectDay', name: 'Perfect Day', icon: '🎯', condition: () => { const today = getTodaysDateEDT(); const log = localStorage.getItem(`log_${today}`); if (!log) return false; const items = JSON.parse(log); const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0); return total > 0 && total <= userProfile.calorieTarget; }},
+    { id: 'explorer', name: 'Explorer', icon: '🗺️', condition: () => getTotalUniqueFoods() >= 10 },
+    { id: 'foodCritic', name: 'Food Critic', icon: '🧐', condition: () => getTotalUniqueFoods() >= 50 },
+    { id: 'librarian', name: 'Librarian', icon: '📚', condition: () => getTotalUniqueFoods() >= 100 },
+    { id: 'manualMaster', name: 'Manual Master', icon: '✍️', condition: () => localStorage.getItem('manualEntryCount') >= 1 },
+    { id: 'chat1', name: 'Curious Mind', icon: '💬', condition: () => chatHistory.length > 2 },
+];
 
-    achievementsGrid.innerHTML = '';
+function loadUnlockedAchievements() {
+    const saved = localStorage.getItem('unlockedAchievements');
+    unlockedAchievements = saved ? JSON.parse(saved) : [];
+}
+
+function saveUnlockedAchievements() {
+    localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+}
+
+function checkAndUnlockAchievements() {
     achievements.forEach(ach => {
+        if (!unlockedAchievements.includes(ach.id)) {
+            if (ach.condition()) {
+                unlockedAchievements.push(ach.id);
+                saveUnlockedAchievements();
+                showAchievementToast(ach);
+            }
+        }
+    });
+    renderAchievements(); 
+}
+
+function renderAchievements() {
+    achievementsGrid.innerHTML = '';
+    const unlocked = getUnlockedAchievements();
+
+    if (unlocked.length === 0) {
+        achievementsGrid.innerHTML = `<p class="col-span-3 text-center text-gray-500">Log your progress to unlock achievements!</p>`;
+        return;
+    }
+
+    unlocked.forEach(ach => {
         const div = document.createElement('div');
-        div.className = `achievement-badge p-4 bg-brand-bg dark:bg-dark-bg rounded-2xl flex flex-col items-center justify-center gap-2 ${ach.unlocked ? 'unlocked' : ''}`;
+        div.className = `achievement-badge unlocked p-4 bg-brand-bg dark:bg-dark-bg rounded-2xl flex flex-col items-center justify-center gap-2`;
         div.innerHTML = `
             <span class="text-4xl">${ach.icon}</span>
             <span class="text-xs font-semibold">${ach.name}</span>
@@ -354,13 +388,26 @@ function renderAchievements() {
     });
 }
 
+function getUnlockedAchievements() {
+    return achievements.filter(ach => unlockedAchievements.includes(ach.id));
+}
+
+function getTotalUniqueFoods() {
+    const allLogs = Object.keys(localStorage).filter(k => k.startsWith('log_'));
+    const uniqueFoods = new Set();
+    allLogs.forEach(key => {
+        const log = JSON.parse(localStorage.getItem(key));
+        Object.keys(log).forEach(foodId => uniqueFoods.add(foodId));
+    });
+    return uniqueFoods.size;
+}
+
+
 function calculateStreak() {
     let streak = 0;
-    const today = new Date();
-    
     for (let i = 0; i < 365; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
+        const d = new Date();
+        d.setDate(d.getDate() - i);
         const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d);
         
         const log = localStorage.getItem(`log_${dateString}`);
@@ -381,6 +428,15 @@ function updateStreak() {
     } else {
         streakCounter.classList.add('hidden');
     }
+}
+
+function showAchievementToast(achievement) {
+    toastIcon.textContent = achievement.icon;
+    toastName.textContent = achievement.name;
+    achievementToast.classList.add('show');
+    setTimeout(() => {
+        achievementToast.classList.remove('show');
+    }, 4000);
 }
 
 
@@ -507,6 +563,10 @@ function handleManualAdd() {
         alert("Please enter a valid calorie amount.");
         return;
     }
+    
+    // Track manual entry for achievement
+    let manualCount = parseInt(localStorage.getItem('manualEntryCount')) || 0;
+    localStorage.setItem('manualEntryCount', ++manualCount);
 
     addFoodToDB({ name, calories });
     manualNameInput.value = '';
@@ -551,6 +611,7 @@ async function handleChatSend() {
         document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
         appendMessage(aiResponse, 'ai');
         chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
+        checkAndUnlockAchievements();
 
     } catch (error) {
         console.error("Gemini API error:", error);
