@@ -148,3 +148,27 @@ body {
     background-color: #2C3333; /* dark-bg */
 }
 
+/* Achievement Toast Notification */
+.achievement-toast {
+    position: fixed;
+    top: -100px; /* Initially hidden off-screen */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #fff;
+    color: #333;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+    transition: top 0.5s ease-in-out;
+    display: flex;
+    align-items: center;
+}
+.dark .achievement-toast {
+    background-color: #393E46;
+    color: #EAEAEA;
+}
+.achievement-toast.show {
+    top: 20px;
+}
+
