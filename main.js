@@ -6,7 +6,7 @@ let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCalo
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     weightChartContainer, welcomeMessage, manualNameInput,
     manualCaloriesInput, addManualBtn, aiChatModal, openChatBtn, closeChatBtn,
-    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, tabButtons, tabContents;
+    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, streakCounter, tabButtons, tabContents;
 
 const userProfile = {
     name: 'User',
@@ -38,8 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyLogMessage = document.getElementById('empty-log-message');
     themeToggleSwitch = document.getElementById('theme-toggle-switch');
     historyBtns = document.querySelectorAll('.history-btn');
-    calorieChartLoader = document.getElementById('calorie-chart-loader');
-    calorieChartContainer = document.getElementById('calorieChartContainer');
     aiResponseEl = document.getElementById('ai-response');
     getAiTipBtn = document.getElementById('get-ai-tip-btn');
     aiLoader = document.getElementById('ai-loader');
@@ -47,9 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
     logWeightBtn = document.getElementById('log-weight-btn');
     currentWeightDisplay = document.getElementById('current-weight-display');
     goalWeightDisplay = document.getElementById('goal-weight-display');
-    weightChartContainer = document.getElementById('weightHistoryChart'); 
+    weightChartContainer = document.getElementById('weightHistoryChart');
+    calorieHistoryChart = document.getElementById('calorieHistoryChart');
     achievementsGrid = document.getElementById('achievements-grid');
     streakDays = document.getElementById('streak-days');
+    streakCounter = document.getElementById('streak-counter');
     tabButtons = document.querySelectorAll('.tab-btn');
     tabContents = document.querySelectorAll('.tab-content');
     manualNameInput = document.getElementById('manualNameInput');
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', handleSearchInput);
     dailyLog.addEventListener('click', handleLogInteraction);
     addManualBtn.addEventListener('click', handleManualAdd);
-    openChatBtn.addEventListener('click', () => aiChatModal.classList.remove('hidden'));
+    openChatBtn.addEventListener('click', handleOpenChat);
     closeChatBtn.addEventListener('click', () => aiChatModal.classList.add('hidden'));
     chatSendBtn.addEventListener('click', handleChatSend);
     chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatSend(); });
@@ -160,12 +160,10 @@ function getTodaysDateEDT() {
 }
 
 function getTodaysLog() {
-    logLoader.classList.remove('hidden');
     const today = getTodaysDateEDT();
     const savedLog = localStorage.getItem(`log_${today}`);
     dailyItems = savedLog ? JSON.parse(savedLog) : {};
     renderLog();
-    logLoader.classList.add('hidden');
 }
 
 function getWeightHistory() {
@@ -251,13 +249,13 @@ function renderCalorieHistoryChart(data) {
     const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
     const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = sortedDates.map(date => data[date]);
+    const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
 
     if (calorieHistoryChart) {
         calorieHistoryChart.data.labels = labels;
         calorieHistoryChart.data.datasets[0].data = values;
         calorieHistoryChart.update();
     } else {
-        const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
         calorieHistoryChart = new Chart(ctx, {
             type: 'bar',
             data: { labels, datasets: [{ label: 'Calories', data: values }] },
@@ -270,8 +268,8 @@ function renderCalorieHistoryChart(data) {
 function renderWeightChart(data) {
     const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = data.map(d => d.weight);
-
     const ctx = document.getElementById('weightHistoryChart').getContext('2d');
+
     if (weightHistoryChart) {
         weightHistoryChart.data.labels = labels;
         weightHistoryChart.data.datasets[0].data = values;
@@ -369,7 +367,7 @@ function calculateStreak() {
         if (log && Object.keys(JSON.parse(log)).length > 0) {
             streak++;
         } else {
-            break;
+            if (i > 0) break; 
         }
     }
     return streak;
@@ -394,13 +392,13 @@ async function getAICoachTip() {
 
     await fetchHealthDataSummary();
 
-    const prompt = `You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine. The user's health data summary is: ${healthDataSummary}. Based on this data, provide a short (2-4 sentences), motivational, and practical tip. Your advice must focus on one of these topics: a low-calorie Indian meal, a protein-rich shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
+    const prompt = `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip (2-4 sentences) about a low-calorie Indian meal, a protein shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
 
     try {
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'ai', query: prompt })
+            body: JSON.stringify({ type: 'ai', query: { contents: [{ parts: [{ text: prompt }] }] } })
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
@@ -525,19 +523,13 @@ async function handleChatSend() {
     chatSendBtn.disabled = true;
 
     // Show AI typing indicator
-    appendMessage('<div class="loader chat-loader"></div>', 'ai');
-    const aiBubble = chatContainer.querySelector('.ai-message-bubble:last-child');
+    const typingId = `typing-${Date.now()}`;
+    appendMessage(`<div class="typing-loader" id="${typingId}"><span></span><span></span><span></span></div>`, 'ai');
 
     await fetchHealthDataSummary();
 
     const systemInstruction = {
-        parts: [{ text: `
-            You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine.
-            The user is predominantly vegetarian but also eats eggs, tofu, and shrimp for protein.
-            Here is the user's current health data summary, which you should use as context for your answers:
-            ${healthDataSummary}
-            Keep your responses conversational and focused on their questions.
-        `}]
+        parts: [{ text: `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user is predominantly vegetarian but also eats eggs, tofu, and shrimp. Here is the user's current health data summary: ${healthDataSummary}. Keep your responses conversational and focused on their questions.` }]
     };
 
     try {
@@ -556,42 +548,60 @@ async function handleChatSend() {
         
         const result = await response.json();
         const aiResponse = result.candidates[0].content.parts[0].text;
+        
+        // Remove typing indicator and add final response
+        document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
+        appendMessage(aiResponse, 'ai');
         chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
-        aiBubble.innerHTML = `<p>${aiResponse}</p>`;
+
     } catch (error) {
         console.error("Gemini API error:", error);
-        aiBubble.innerHTML = `<p>Sorry, I'm having trouble connecting right now. Please try again in a moment.</p>`;
+        document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
+        appendMessage("Sorry, I'm having trouble connecting right now. Please try again.", 'ai');
     } finally {
         chatSendBtn.disabled = false;
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 }
 
+function handleOpenChat() {
+    chatContainer.innerHTML = ''; // Clear and rebuild the chat history
+    chatHistory.forEach(msg => {
+        const sender = msg.role === 'user' ? 'user' : 'ai';
+        const message = msg.parts[0].text;
+        appendMessage(message, sender);
+    });
+    aiChatModal.classList.remove('hidden');
+}
+
+
 function appendMessage(message, sender) {
-    const messageDiv = document.createElement('div');
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
+    
     if (sender === 'user') {
-        messageDiv.className = 'flex items-start gap-3 justify-end';
-        messageDiv.innerHTML = `
-            <div class="bg-brand-primary text-white p-4 rounded-lg rounded-br-none max-w-xs md:max-w-md">
+        messageWrapper.classList.add('justify-end');
+        messageWrapper.innerHTML = `
+            <div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-xs md:max-w-md message-bubble">
                 <p>${message}</p>
             </div>
-            <div class="bg-brand-subtle dark:bg-dark-subtle text-brand-text dark:text-dark-text p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">U</div>
+            <div class="bg-brand-subtle dark:bg-dark-subtle text-brand-text dark:text-dark-text p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">U</div>
         `;
     } else { // AI
-        messageDiv.className = 'flex items-start gap-3';
-        messageDiv.innerHTML = `
-            <div class="bg-brand-primary text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold">A</div>
-            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
+        messageWrapper.classList.add('justify-start');
+        messageWrapper.innerHTML = `
+            <div class="bg-brand-primary text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">A</div>
+            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-xs md:max-w-md message-bubble">
                 ${message}
             </div>
         `;
     }
-    chatContainer.appendChild(messageDiv);
+    chatContainer.appendChild(messageWrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 async function fetchHealthDataSummary() {
-    let calorieHistory = "Recent calorie history:\n";
+    let calorieHistoryText = "Recent calorie history:\n";
     for (let i = 0; i < 7; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
@@ -599,14 +609,14 @@ async function fetchHealthDataSummary() {
         const savedLog = localStorage.getItem(`log_${dateString}`);
         const items = savedLog ? JSON.parse(savedLog) : {};
         const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
-        calorieHistory += `- ${dateString}: ${total} kcal\n`;
+        calorieHistoryText += `- ${dateString}: ${total} kcal\n`;
     }
     
     const savedWeightHistory = localStorage.getItem('weightHistory');
     const weights = savedWeightHistory ? JSON.parse(savedWeightHistory) : [];
-    let weightHistory = "Recent weight history:\n";
+    let weightHistoryText = "Recent weight history:\n";
     weights.forEach(w => {
-        weightHistory += `- ${w.date}: ${w.weight} kg\n`;
+        weightHistoryText += `- ${w.date}: ${w.weight} kg\n`;
     });
     
     const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : userProfile.startWeight;
@@ -619,8 +629,8 @@ async function fetchHealthDataSummary() {
         - Goal Weight: ${userProfile.goalWeight} kg
         - Daily Calorie Target: ${userProfile.calorieTarget} kcal
         
-        ${calorieHistory}
-        ${weightHistory}
+        ${calorieHistoryText}
+        ${weightHistoryText}
     `;
 }
 
