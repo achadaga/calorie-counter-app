@@ -250,13 +250,13 @@ function renderCalorieHistoryChart(data) {
     const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
     const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = sortedDates.map(date => data[date]);
+    const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
 
     if (calorieHistoryChart) {
         calorieHistoryChart.data.labels = labels;
         calorieHistoryChart.data.datasets[0].data = values;
         calorieHistoryChart.update();
     } else {
-        const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
         calorieHistoryChart = new Chart(ctx, {
             type: 'bar',
             data: { labels, datasets: [{ label: 'Calories', data: values }] },
@@ -269,8 +269,8 @@ function renderCalorieHistoryChart(data) {
 function renderWeightChart(data) {
     const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = data.map(d => d.weight);
-
     const ctx = document.getElementById('weightHistoryChart').getContext('2d');
+
     if (weightHistoryChart) {
         weightHistoryChart.data.labels = labels;
         weightHistoryChart.data.datasets[0].data = values;
@@ -399,7 +399,7 @@ async function getAICoachTip() {
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'ai', query: prompt })
+            body: JSON.stringify({ type: 'ai', query: { contents: [{ parts: [{ text: prompt }] }] } })
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
@@ -530,13 +530,7 @@ async function handleChatSend() {
     await fetchHealthDataSummary();
 
     const systemInstruction = {
-        parts: [{ text: `
-            You are a friendly and encouraging AI nutrition coach specializing in modern, healthy Indian cuisine.
-            The user is predominantly vegetarian but also eats eggs, tofu, and shrimp for protein.
-            Here is the user's current health data summary, which you should use as context for your answers:
-            ${healthDataSummary}
-            Keep your responses conversational and focused on their questions.
-        `}]
+        parts: [{ text: `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user is predominantly vegetarian but also eats eggs, tofu, and shrimp. Here is the user's current health data summary: ${healthDataSummary}. Keep your responses conversational and focused on their questions.` }]
     };
 
     try {
@@ -559,7 +553,7 @@ async function handleChatSend() {
         aiBubble.innerHTML = `<p>${aiResponse}</p>`;
     } catch (error) {
         console.error("Gemini API error:", error);
-        aiBubble.innerHTML = `<p>Sorry, I'm having trouble connecting right now. Please try again in a moment.</p>`;
+        aiBubble.innerHTML = `<p>Sorry, I'm having trouble connecting right now. Please try again.</p>`;
     } finally {
         chatSendBtn.disabled = false;
         chatContainer.scrollTop = chatContainer.scrollHeight;
