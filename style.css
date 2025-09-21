@@ -28,7 +28,7 @@ body {
 /* Floating Action Button for Chat */
 .chat-fab {
     position: fixed;
-    bottom: 80px; /* Adjust to be above the nav bar */
+    bottom: 100px; /* Adjust to be above the nav bar */
     right: 16px;
     width: 64px;
     height: 64px;
@@ -70,35 +70,6 @@ body {
     background-color: #4A5568; /* dark-subtle */
     border-radius: 20px;
 }
-
-.quick-reply-btn {
-    flex-shrink: 0;
-    padding: 8px 16px;
-    border-radius: 9999px;
-    background-color: #FBF9F6; /* brand-bg */
-    color: #4F6F52; /* brand-text */
-    border: 1px solid #E9E5E0; /* brand-subtle */
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-.dark .quick-reply-btn {
-    background-color: #393E46; /* dark-surface */
-    color: #EAEAEA; /* dark-text */
-    border: 1px solid #4A5568; /* dark-subtle */
-}
-.quick-reply-btn:hover {
-    background-color: #86A789; /* brand-primary */
-    color: white;
-    border-color: #86A789;
-}
-.dark .quick-reply-btn:hover {
-    background-color: #A8D08D; /* dark-primary */
-    color: #2C3333;
-    border-color: #A8D08D;
-}
-
 
 @keyframes slide-in {
     from {
