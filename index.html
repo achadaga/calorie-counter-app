@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class', // This line enables manual dark mode toggling
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -43,202 +43,74 @@
     <link rel="stylesheet" href="style.css">
 
     <script>
-        // Apply theme on initial load to prevent flash of wrong theme
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
+        // Apply theme on initial load
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.classList.add('dark');
         }
     </script>
 </head>
 <body class="bg-brand-bg dark:bg-dark-bg text-brand-text dark:text-dark-text font-[Poppins] transition-colors duration-300">
 
-    <!-- NEW: Achievement Toast Notification -->
-    <div id="achievement-toast" class="achievement-toast">
-        <div class="flex items-center gap-4">
-            <span id="toast-icon" class="text-3xl">🏆</span>
-            <div>
-                <p class="font-bold">Achievement Unlocked!</p>
-                <p id="toast-name" class="text-sm">You've logged for a full week!</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="main-container" class="container mx-auto max-w-lg p-4 pb-24">
-
-        <!-- Header -->
-        <header class="text-center my-6 flex justify-between items-center">
-             <div class="w-1/3"></div>
-            <h1 class="text-3xl font-bold text-brand-text dark:text-dark-text w-1/3">Journey</h1>
-             <div class="w-1/3 flex justify-end">
-                <!-- Theme Toggle Switch -->
-                <label for="theme-toggle-switch" class="flex items-center cursor-pointer">
-                    <div class="relative">
-                        <input type="checkbox" id="theme-toggle-switch" class="sr-only">
-                        <div class="block bg-brand-subtle dark:bg-dark-subtle w-14 h-8 rounded-full"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform dark:translate-x-6"></div>
-                    </div>
-                </label>
-            </div>
-        </header>
-
-        <!-- Main Content Area -->
-        <main id="app-content" class="space-y-6">
+    <!-- Authentication Screen (Initially visible) -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-brand-surface dark:bg-dark-surface p-8 rounded-3xl shadow-lg">
             
-            <!-- TODAY TAB CONTENT (Initially visible) -->
-            <div id="today-tab-content" class="tab-content">
-                <!-- Daily Goal Card -->
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg mb-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold">Today's Goal</h2>
-                        <div id="streak-counter" class="flex items-center gap-2 text-amber-500 font-semibold hidden">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.267 3.193a1 1 0 011.414 0l.243.243a1 1 0 00.707.293h.343a1 1 0 011 1v.343a1 1 0 00.293.707l.243.243a1 1 0 010 1.414l-.243.243a1 1 0 00-.293.707v.343a1 1 0 01-1 1h-.343a1 1 0 00-.707.293l-.243.243a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5zM5.5 12.5a1 1 0 100-2 1 1 0 000 2zM3 8.5a1 1 0 100-2 1 1 0 000 2zM8 5.5a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /><path d="M12.828 7.172a1 1 0 00-1.414 0L4.707 13.879a1 1 0 101.414 1.414L12.828 8.586a1 1 0 000-1.414z" /></svg>
-                            <span id="streak-days"></span>
-                        </div>
-                    </div>
-                    <div class="relative w-48 h-48 mx-auto">
-                        <svg class="w-full h-full" viewBox="0 0 36 36">
-                            <path class="text-brand-secondary dark:text-dark-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
-                            <path id="calorie-progress-circle" class="text-brand-primary dark:text-dark-primary transition-all duration-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round"></path>
-                        </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <span id="totalCalories" class="text-4xl font-bold">0</span>
-                            <span class="text-sm">/</span>
-                            <span id="calorieTarget" class="text-sm">... Kcal</span>
-                        </div>
-                    </div>
+            <!-- Login View -->
+            <div id="login-view">
+                <h2 class="text-3xl font-bold text-center mb-6">Welcome Back</h2>
+                <div class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
+                    <button id="login-btn" class="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">Login</button>
                 </div>
-
-                <!-- Log Your Food Card -->
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Log Your Food</h2>
-                    <div class="relative">
-                        <input type="text" id="searchInput" placeholder="Search for food..." class="w-full p-3 pl-10 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-primary">
-                        <div id="search-loader" class="loader absolute right-3 top-1/2 -translate-y-1/2 hidden" style="width:20px; height:20px; border-width:2px;"></div>
-                    </div>
-                    <div id="searchResults" class="mt-2"></div>
-                     <div class="mt-4">
-                        <p class="text-center text-sm text-gray-400 mb-2">Or Add Manually</p>
-                        <div class="flex gap-2">
-                             <input type="text" id="manualNameInput" placeholder="Optional name" class="w-2/5 p-3 text-sm bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
-                             <input type="number" id="manualCaloriesInput" placeholder="Calories" class="w-2/5 p-3 text-sm bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
-                             <button id="add-manual-btn" class="w-1/5 bg-brand-primary hover:bg-opacity-80 text-white font-bold rounded-lg transition">Add</button>
-                         </div>
-                    </div>
-                    <div id="daily-log-container" class="mt-6">
-                         <h3 class="text-lg font-semibold mb-3">Today's Log</h3>
-                         <div id="log-loader" class="flex justify-center hidden"><div class="loader"></div></div>
-                         <ul id="dailyLog" class="space-y-3"></ul>
-                         <p id="empty-log-message" class="text-center text-gray-500 py-4 hidden">No food logged yet.</p>
-                    </div>
+                 <div class="flex justify-between items-center mt-4">
+                    <a href="#" id="show-register" class="text-sm text-brand-primary dark:text-dark-primary">Register</a>
+                    <a href="#" id="show-reset" class="text-sm text-gray-500">Forgot Password?</a>
                 </div>
             </div>
 
-            <!-- DASHBOARD TAB CONTENT -->
-            <div id="dashboard-tab-content" class="tab-content hidden space-y-6">
-                <!-- Weight Progress Card -->
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Weight Progress</h2>
-                     <div class="grid grid-cols-2 gap-4 text-center mb-4">
-                        <div>
-                            <p class="text-sm">Current</p>
-                            <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
-                        </div>
-                        <div>
-                            <p class="text-sm">Goal</p>
-                            <p class="text-2xl font-bold" id="goal-weight-display">-- kg</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mb-4">
-                        <input type="number" id="weightInput" step="0.1" placeholder="Log today's weight" class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
-                        <button id="log-weight-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">Log</button>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="weightHistoryChart"></canvas>
-                    </div>
-                </div>
-                 <!-- Calorie History Card -->
-                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Calorie History</h2>
-                     <div class="flex justify-center space-x-2 mb-4">
-                        <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-brand-secondary dark:bg-dark-secondary">7 Days</button>
-                        <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">15 Days</button>
-                        <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">30 Days</button>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="calorieHistoryChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- COACH TAB CONTENT -->
-            <div id="coach-tab-content" class="tab-content hidden space-y-6">
-                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Achievements</h2>
-                    <div class="grid grid-cols-3 gap-4 text-center" id="achievements-grid">
-                        <!-- Achievements will be dynamically inserted here -->
-                    </div>
-                </div>
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">AI Coach</h2>
-                    <div id="ai-response-container" class="p-4 bg-brand-bg dark:bg-dark-bg rounded-lg min-h-[100px] flex items-center justify-center">
-                         <p id="ai-response" class="text-sm italic">Click below for a personalized tip!</p>
-                         <div id="ai-loader" class="loader hidden"></div>
-                     </div>
-                     <button id="get-ai-tip-btn" class="mt-4 w-full bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">
-                         Get Advice
-                     </button>
-                </div>
-            </div>
-
-        </main>
-
-    </div>
-
-    <!-- Floating Chat Button -->
-    <button id="open-chat-btn" class="chat-fab">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c.225-.01.45-.017.675-.017h3.5c.225 0 .45.007.675.017v5.714a2.25 2.25 0 01-.659 1.591L14.25 14.5M9.75 3.104a2.25 2.25 0 00-2.25 2.25v10.5a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-10.5a2.25 2.25 0 00-2.25-2.25h-3.5m-3.75 6.75h3.75"></path></svg>
-    </button>
-    
-    <!-- AI "Smart Assistant" Chat Modal -->
-    <div id="ai-chat-modal" class="fixed inset-0 bg-black/60 flex flex-col items-center justify-center p-4 z-50 hidden">
-         <div class="flex flex-col h-full max-h-[90vh] w-full max-w-2xl bg-brand-surface dark:bg-dark-surface shadow-lg rounded-2xl">
-            <header class="p-4 border-b border-brand-subtle dark:border-dark-subtle flex items-center justify-between">
-                <h1 class="text-xl font-bold">AI Health Assistant</h1>
-                <button id="close-chat-btn" class="p-2 rounded-full hover:bg-brand-secondary dark:hover:bg-dark-secondary">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </header>
-            <main id="chat-container" class="flex-1 p-6 overflow-y-auto space-y-6"></main>
-            <footer class="p-4 border-t border-brand-subtle dark:border-dark-subtle">
-                 <div id="quick-replies-container" class="flex gap-2 mb-2 overflow-x-auto pb-2"></div>
-                <div class="flex items-center gap-2">
-                    <input type="text" id="chat-input" placeholder="e.g., 'Log 1 cup of rice'..." class="w-full p-4 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary text-lg">
-                    <button id="chat-send-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold p-4 rounded-lg transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <!-- Register View -->
+            <div id="register-view" class="hidden">
+                <h2 class="text-3xl font-bold text-center mb-6">Create Account</h2>
+                <div class="space-y-4">
+                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
+                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
+                    <button id="register-btn" class="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">Register</button>
+                    <div class="text-center my-2 text-gray-500">or</div>
+                    <button id="google-signin-btn" class="w-full bg-white text-black py-3 rounded-xl font-bold border border-brand-subtle flex items-center justify-center gap-2">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" /> Continue with Google
+                    </button>
+                     <button id="apple-signin-btn" class="w-full bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 16 16"><path d="M8.28,6.88a1.6,1.6,0,0,1,1.13.43,1.55,1.55,0,0,1,.56,1.18,3.29,3.29,0,0,1-.05.79,1,1,0,0,0,.15.82,1,1,0,0,0,.81.42h.1a2.81,2.81,0,0,1,1.23-.29,4.2,4.2,0,0,1,1.5.31,3.4,3.4,0,0,0-1.4-2.5,4.42,4.42,0,0,0-3-1.12A4.47,4.47,0,0,0,8.28,6.88ZM12.35,16a3,3,0,0,1-1.14-.19,1.52,1.52,0,0,1-.83-.75,3,3,0,0,0-.73-1.07,3.12,3.12,0,0,0-1.1-.73,1.52,1.52,0,0,1-.83-.75,3.16,3.16,0,0,1-1.14-.19,3,3,0,0,1-1.11.19,2.8,2.8,0,0,1-1-.24,7.83,7.83,0,0,1,2.95-2.2,4.59,4.59,0,0,1,3.38-.1,4.8,4.8,0,0,1,.87.42,1,1,0,0,0,1.2-.12,4.72,4.72,0,0,1,3.4-2.59,2.36,2.36,0,0,0-1.46,2.23,5.1,5.1,0,0,0,1.15,3.31A2.52,2.52,0,0,1,12.35,16ZM10.91,1.05a3.63,3.63,0,0,0-2.82,1.8,3.6,3.6,0,0,0-2.81-1.8,3.68,3.68,0,0,0-3.61,4A5.61,5.61,0,0,0,3.35,9.5a5.52,5.52,0,0,0,4,4.23,1,1,0,0,0,.92,0,1,1,0,0,0,.5-.86v-.07a2.72,2.72,0,0,1,.24-.9,3.52,3.52,0,0,1,1-.78,3.4,3.4,0,0,1,1.2-.28h.1a1,1,0,0,0,.9-.58,1,1,0,0,0,.08-.94,5.42,5.42,0,0,0-1.63-3.2A3.66,3.66,0,0,0,10.91,1.05Z"/></svg> Continue with Apple
                     </button>
                 </div>
-            </footer>
+                <div class="text-center mt-4">
+                    <a href="#" id="show-login-from-register" class="text-sm text-brand-primary dark:text-dark-primary">Already have an account? Login</a>
+                </div>
+            </div>
+
+            <!-- Password Reset View -->
+            <div id="reset-password-view" class="hidden">
+                <h2 class="text-3xl font-bold text-center mb-6">Reset Password</h2>
+                <p class="text-center text-sm mb-4">Enter your email and we'll send you a link to reset your password.</p>
+                <div class="space-y-4">
+                    <input type="email" id="reset-email" placeholder="Email" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
+                    <button id="reset-btn" class="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">Send Reset Link</button>
+                </div>
+                <div class="text-center mt-4">
+                    <a href="#" id="show-login-from-reset" class="text-sm text-brand-primary dark:text-dark-primary">Back to Login</a>
+                </div>
+            </div>
+             <p id="auth-error" class="text-center text-red-500 mt-4 text-sm"></p>
         </div>
     </div>
+
+    <!-- Main App Container (Initially hidden) -->
+    <div id="app-container" class="hidden">
+        <!-- The app UI will be injected here by main.js -->
+    </div>
     
-     <!-- Tab Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/70 dark:bg-black/70 backdrop-blur-lg border-t border-brand-subtle dark:border-dark-subtle rounded-t-3xl shadow-2xl">
-        <div class="flex justify-around p-2">
-            <button data-tab="today" class="tab-btn p-3 rounded-xl">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-            </button>
-            <button data-tab="dashboard" class="tab-btn p-3 rounded-xl">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0h6M9 9l2-2m2 2l2-2m-2 2v10m-6-10a2 2 0 012-2h2a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6z"></path></svg>
-            </button>
-            <button data-tab="coach" class="tab-btn p-3 rounded-xl">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </button>
-        </div>
-    </nav>
-
-
-    <script src="main.js" ></script>
+    <script src="main.js" type="module"></script>
 </body>
 </html>
 
