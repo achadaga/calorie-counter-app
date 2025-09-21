@@ -62,25 +62,14 @@ let unsubscribeLog, unsubscribeWeight;
 // --- 2. FIREBASE SETUP ---
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 // V V V REPLACE THIS WHOLE OBJECT V V V
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZ1DcLq8Qmo9-lESbtai2O9LaixnDEChY",
-    authDomain: "caloriecounter-daa8d.firebaseapp.com",
-    projectId: "caloriecounter-daa8d",
-    storageBucket: "caloriecounter-daa8d.firebasestorage.app",
-    messagingSenderId: "194099333222",
-    appId: "1:194099333222:web:950e780b316c195c0305a7"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBZ1DcLq8Qmo9-lESbtai2O9LaixnDEChY",
+  authDomain: "caloriecounter-daa8d.firebaseapp.com",
+  projectId: "caloriecounter-daa8d",
+  storageBucket: "caloriecounter-daa8d.firebasestorage.app",
+  messagingSenderId: "194099333222",
+  appId: "1:194099333222:web:950e780b316c195c0305a7"
+};
 // ^ ^ ^ WITH YOUR NEW CONFIG ^ ^ ^
 
 const app = initializeApp(firebaseConfig);
