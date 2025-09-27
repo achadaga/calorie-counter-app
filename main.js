@@ -4,9 +4,8 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     themeToggleSwitch, historyBtns,
     aiResponseEl, getAiTipBtn, aiLoader, weightInput,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
-    weightChartContainer, achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
+    achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
-    aiChatModal, openChatBtn, closeChatBtn,
     chatContainer, chatInput, chatSendBtn, quickRepliesContainer;
 
 const userProfile = {
@@ -43,16 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
     logWeightBtn = document.getElementById('log-weight-btn');
     currentWeightDisplay = document.getElementById('current-weight-display');
     goalWeightDisplay = document.getElementById('goal-weight-display');
-    weightChartContainer = document.getElementById('weightHistoryChart'); 
-    calorieHistoryChart = document.getElementById('calorieHistoryChart');
     achievementsGrid = document.getElementById('achievements-grid');
     streakDays = document.getElementById('streak-days');
     streakCounter = document.getElementById('streak-counter');
     tabButtons = document.querySelectorAll('.tab-btn');
     tabContents = document.querySelectorAll('.tab-content');
-    aiChatModal = document.getElementById('ai-chat-modal');
-    openChatBtn = document.getElementById('open-chat-btn');
-    closeChatBtn = document.getElementById('close-chat-btn');
     chatContainer = document.getElementById('chat-container');
     chatInput = document.getElementById('chat-input');
     chatSendBtn = document.getElementById('chat-send-btn');
@@ -67,8 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
     historyBtns.forEach(btn => btn.addEventListener('click', () => handleHistoryButtonClick(btn)));
     logWeightBtn.addEventListener('click', handleLogWeight);
     getAiTipBtn.addEventListener('click', getAICoachTip);
-    openChatBtn.addEventListener('click', handleOpenChat);
-    closeChatBtn.addEventListener('click', () => aiChatModal.classList.add('hidden'));
     chatSendBtn.addEventListener('click', handleChatSend);
     chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatSend(); });
     quickRepliesContainer.addEventListener('click', (e) => {
@@ -109,6 +101,8 @@ function initializeAppData() {
     
     const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had 2 idlis and a coffee'), or ask for your progress.";
     chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
+    appendMessage({ type: 'text', payload: { message: initialAiMessage } }, 'ai');
+
 
     loadUnlockedAchievements();
     getTodaysLog();
@@ -164,9 +158,9 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
-    const foodId = foodItem.name.replace(/\s+/g, '-').toLowerCase();
+    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase();
     if (dailyItems[foodId]) {
-        dailyItems[foodId].quantity += foodItem.quantity; // Add to existing quantity
+        dailyItems[foodId].quantity += foodItem.quantity;
     } else {
         dailyItems[foodId] = { ...foodItem, id: foodId };
     }
@@ -358,7 +352,6 @@ async function handleChatSend() {
             const aiResponseJSON = JSON.parse(aiResponseText);
             chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
             
-            // Check if the AI's response is a food log
             if (aiResponseJSON.type === 'food_log' && aiResponseJSON.payload) {
                 addFoodToDB(aiResponseJSON.payload);
                 appendMessage({ type: 'food_log_card', payload: aiResponseJSON.payload }, 'ai');
@@ -370,7 +363,7 @@ async function handleChatSend() {
                 renderQuickReplies(aiResponseJSON.payload.quick_replies);
             }
         } catch (e) {
-            appendMessage({ type: 'text', payload: { message: "I'm having a little trouble formatting my response. Please try rephrasing your request." } }, 'ai');
+            appendMessage({ type: 'text', payload: { message: "I had trouble understanding that. Could you rephrase your meal?" } }, 'ai');
         }
 
     } catch (error) {
@@ -393,7 +386,15 @@ function renderLog() {
     items.forEach(item => {
         const listItem = document.createElement('li');
         listItem.className = 'p-3 bg-brand-bg dark:bg-dark-bg rounded-xl flex justify-between items-center';
-        // ... (rest of the renderLog function is the same)
+        listItem.innerHTML = `
+            <div>
+                <p class="font-semibold">${item.foodName}</p>
+                <p class="text-sm">${item.calories} kcal</p>
+            </div>
+            <div class="font-bold text-lg">x${item.quantity}</div>
+        `;
+        dailyLog.appendChild(listItem);
+        total += item.calories * item.quantity;
     });
     totalCaloriesSpan.textContent = Math.round(total);
     const percentage = userProfile.calorieTarget > 0 ? Math.min((total / userProfile.calorieTarget) * 100, 100) : 0;
@@ -401,7 +402,19 @@ function renderLog() {
 }
 
 function handleOpenChat() {
-    // ... (This function remains the same)
+    chatContainer.innerHTML = ''; 
+    chatHistory.forEach(msg => {
+        let sender, data;
+        try {
+            data = JSON.parse(msg.parts[0].text);
+            sender = msg.role === 'user' ? 'user' : 'ai';
+        } catch(e) {
+            data = { type: 'text', payload: { message: msg.parts[0].text } };
+            sender = msg.role === 'user' ? 'user' : 'ai';
+        }
+        appendMessage(data, sender);
+    });
+    aiChatModal.classList.remove('hidden');
 }
 
 function appendMessage(data, sender) {
