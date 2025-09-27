@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wellness Journey</title>
-    
-    <!-- Tailwind CSS -->
+    <title>Wellness Journey - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,37 +11,20 @@
             theme: {
                 extend: {
                     colors: {
-                        'brand-bg': '#FBF9F6',
-                        'brand-surface': '#FFFFFF',
-                        'brand-primary': '#86A789',
-                        'brand-secondary': '#D2E3C8',
-                        'brand-text': '#4F6F52',
-                        'brand-subtle': '#E9E5E0',
-                        'dark-bg': '#2C3333',
-                        'dark-surface': '#393E46',
-                        'dark-primary': '#A8D08D',
-                        'dark-secondary': '#607d8b',
-                        'dark-text': '#EAEAEA',
-                        'dark-subtle': '#4A5568',
+                        'brand-bg': '#FBF9F6', 'brand-surface': '#FFFFFF', 'brand-primary': '#86A789',
+                        'brand-secondary': '#D2E3C8', 'brand-text': '#4F6F52', 'brand-subtle': '#E9E5E0',
+                        'dark-bg': '#2C3333', 'dark-surface': '#393E46', 'dark-primary': '#A8D08D',
+                        'dark-secondary': '#607d8b', 'dark-text': '#EAEAEA', 'dark-subtle': '#4A5568',
                     }
                 }
             }
         }
     </script>
-    
-    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
-
     <script>
-        // Apply theme on initial load
         if (localStorage.getItem('theme') === 'dark') {
           document.documentElement.classList.add('dark');
         }
@@ -51,11 +32,8 @@
 </head>
 <body class="bg-brand-bg dark:bg-dark-bg text-brand-text dark:text-dark-text font-[Poppins] transition-colors duration-300">
 
-    <!-- Authentication Screen (Initially visible) -->
     <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
         <div class="w-full max-w-md bg-brand-surface dark:bg-dark-surface p-8 rounded-3xl shadow-lg">
-            
-            <!-- Login View -->
             <div id="login-view">
                 <h2 class="text-3xl font-bold text-center mb-6">Welcome Back</h2>
                 <div class="space-y-4">
@@ -63,54 +41,18 @@
                     <input type="password" id="login-password" placeholder="Password" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
                     <button id="login-btn" class="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">Login</button>
                 </div>
-                 <div class="flex justify-between items-center mt-4">
+                <div class="flex justify-between items-center mt-4">
                     <a href="#" id="show-register" class="text-sm text-brand-primary dark:text-dark-primary">Register</a>
                     <a href="#" id="show-reset" class="text-sm text-gray-500">Forgot Password?</a>
                 </div>
             </div>
-
-            <!-- Register View -->
-            <div id="register-view" class="hidden">
-                <h2 class="text-3xl font-bold text-center mb-6">Create Account</h2>
-                <div class="space-y-4">
-                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
-                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
-                    <button id="register-btn" class="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">Register</button>
-                    <div class="text-center my-2 text-gray-500">or</div>
-                    <button id="google-signin-btn" class="w-full bg-white text-black py-3 rounded-xl font-bold border border-brand-subtle flex items-center justify-center gap-2">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" /> Continue with Google
-                    </button>
-                     <button id="apple-signin-btn" class="w-full bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 16 16"><path d="M8.28,6.88a1.6,1.6,0,0,1,1.13.43,1.55,1.55,0,0,1,.56,1.18,3.29,3.29,0,0,1-.05.79,1,1,0,0,0,.15.82,1,1,0,0,0,.81.42h.1a2.81,2.81,0,0,1,1.23-.29,4.2,4.2,0,0,1,1.5.31,3.4,3.4,0,0,0-1.4-2.5,4.42,4.42,0,0,0-3-1.12A4.47,4.47,0,0,0,8.28,6.88ZM12.35,16a3,3,0,0,1-1.14-.19,1.52,1.52,0,0,1-.83-.75,3,3,0,0,0-.73-1.07,3.12,3.12,0,0,0-1.1-.73,1.52,1.52,0,0,1-.83-.75,3.16,3.16,0,0,1-1.14-.19,3,3,0,0,1-1.11.19,2.8,2.8,0,0,1-1-.24,7.83,7.83,0,0,1,2.95-2.2,4.59,4.59,0,0,1,3.38-.1,4.8,4.8,0,0,1,.87.42,1,1,0,0,0,1.2-.12,4.72,4.72,0,0,1,3.4-2.59,2.36,2.36,0,0,0-1.46,2.23,5.1,5.1,0,0,0,1.15,3.31A2.52,2.52,0,0,1,12.35,16ZM10.91,1.05a3.63,3.63,0,0,0-2.82,1.8,3.6,3.6,0,0,0-2.81-1.8,3.68,3.68,0,0,0-3.61,4A5.61,5.61,0,0,0,3.35,9.5a5.52,5.52,0,0,0,4,4.23,1,1,0,0,0,.92,0,1,1,0,0,0,.5-.86v-.07a2.72,2.72,0,0,1,.24-.9,3.52,3.52,0,0,1,1-.78,3.4,3.4,0,0,1,1.2-.28h.1a1,1,0,0,0,.9-.58,1,1,0,0,0,.08-.94,5.42,5.42,0,0,0-1.63-3.2A3.66,3.66,0,0,0,10.91,1.05Z"/></svg> Continue with Apple
-                    </button>
-                </div>
-                <div class="text-center mt-4">
-                    <a href="#" id="show-login-from-register" class="text-sm text-brand-primary dark:text-dark-primary">Already have an account? Login</a>
-                </div>
-            </div>
-
-            <!-- Password Reset View -->
-            <div id="reset-password-view" class="hidden">
-                <h2 class="text-3xl font-bold text-center mb-6">Reset Password</h2>
-                <p class="text-center text-sm mb-4">Enter your email and we'll send you a link to reset your password.</p>
-                <div class="space-y-4">
-                    <input type="email" id="reset-email" placeholder="Email" class="w-full p-3 bg-brand-bg dark:bg-dark-bg rounded-xl">
-                    <button id="reset-btn" class="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">Send Reset Link</button>
-                </div>
-                <div class="text-center mt-4">
-                    <a href="#" id="show-login-from-reset" class="text-sm text-brand-primary dark:text-dark-primary">Back to Login</a>
-                </div>
-            </div>
-             <p id="auth-error" class="text-center text-red-500 mt-4 text-sm"></p>
+            <div id="register-view" class="hidden"><!-- Register form --></div>
+            <div id="reset-password-view" class="hidden"><!-- Reset form --></div>
+            <p id="auth-error" class="text-center text-red-500 mt-4 text-sm"></p>
         </div>
     </div>
-
-    <!-- Main App Container (Initially hidden) -->
-    <div id="app-container" class="hidden">
-        <!-- The app UI will be injected here by main.js -->
-    </div>
     
-    <script src="main.js" type="module"></script>
+    <script src="auth.js" type="module"></script>
 </body>
 </html>
 
