@@ -25,41 +25,7 @@ body {
     filter: grayscale(0%);
 }
 
-/* Floating Action Button for Chat */
-.chat-fab {
-    position: fixed;
-    bottom: 100px; /* Adjust to be above the nav bar */
-    right: 16px;
-    width: 64px;
-    height: 64px;
-    background-color: #86A789; /* brand-primary */
-    color: white;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    z-index: 40;
-    animation: bounce 2s infinite;
-}
-.dark .chat-fab {
-    background-color: #A8D08D; /* dark-primary */
-    color: #2C3333; /* dark-bg */
-}
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-        transform: translateY(0);
-    }
-    40% {
-        transform: translateY(-20px);
-    }
-    60% {
-        transform: translateY(-10px);
-    }
-}
-
-/* Smart Assistant Chat UI Styles */
+/* Chat UI Styles */
 #chat-container::-webkit-scrollbar {
     width: 8px;
 }
@@ -108,10 +74,10 @@ body {
 }
 
 .chart-widget-container {
-    height: 250px;
+    height: 150px; /* Smaller chart for widgets */
     width: 100%;
-    max-width: 400px;
-    padding: 1rem;
+    max-width: 300px;
+    padding: 0.5rem;
     background-color: #FBF9F6; /* brand-bg */
     border-radius: 12px;
 }
