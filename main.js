@@ -62,13 +62,13 @@ let unlockedAchievements = [];
 let unsubscribeLog, unsubscribeWeight;
 
 // --- 2. FIREBASE SETUP ---
-const firebaseConfig = { 
-    apiKey: "YOUR_API_KEY", 
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+const firebaseConfig = {
+  apiKey: "AIzaSyBZ1DcLq8Qmo9-lESbtai2O9LaixnDEChY",
+  authDomain: "caloriecounter-daa8d.firebaseapp.com",
+  projectId: "caloriecounter-daa8d",
+  storageBucket: "caloriecounter-daa8d.firebasestorage.app",
+  messagingSenderId: "194099333222",
+  appId: "1:194099333222:web:950e780b316c195c0305a7"
 };
 
 const app = initializeApp(firebaseConfig);
