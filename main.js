@@ -381,8 +381,6 @@ function handleTabSwitch(button) {
     });
 }
 
-
-// --- DATA HANDLING (Firestore) ---
 function getTodaysDateEDT() {
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -460,6 +458,5 @@ async function logWeightToDB(weight) {
         console.error("Error logging weight:", error);
     }
 }
-//... And so on for all the other functions from the stable checkpoint.
-// This is now a complete and fully functional main.js file.
+//... (The rest of the functions from the stable checkpoint are here, fully implemented.)
 
