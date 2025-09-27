@@ -133,12 +133,59 @@
 
             <!-- DASHBOARD TAB CONTENT -->
             <div id="dashboard-tab-content" class="tab-content hidden space-y-6">
-                 <!-- Cards for charts -->
+                 <!-- Weight Progress Card -->
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Weight Progress</h2>
+                     <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                        <div>
+                            <p class="text-sm">Current</p>
+                            <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
+                        </div>
+                        <div>
+                            <p class="text-sm">Goal</p>
+                            <p class="text-2xl font-bold" id="goal-weight-display">-- kg</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mb-4">
+                        <input type="number" id="weightInput" step="0.1" placeholder="Log today's weight" class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
+                        <button id="log-weight-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">Log</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="weightHistoryChart"></canvas>
+                    </div>
+                </div>
+                 <!-- Calorie History Card -->
+                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Calorie History</h2>
+                     <div class="flex justify-center space-x-2 mb-4">
+                        <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-brand-secondary dark:bg-dark-secondary">7 Days</button>
+                        <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">15 Days</button>
+                        <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">30 Days</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="calorieHistoryChart"></canvas>
+                    </div>
+                </div>
             </div>
 
             <!-- COACH TAB CONTENT -->
             <div id="coach-tab-content" class="tab-content hidden space-y-6">
-                 <!-- Cards for achievements and AI tip -->
+                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Achievements</h2>
+                    <div class="grid grid-cols-3 gap-4 text-center" id="achievements-grid">
+                        <!-- Achievements will be dynamically inserted here -->
+                    </div>
+                </div>
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">AI Coach</h2>
+                    <div id="ai-response-container" class="p-4 bg-brand-bg dark:bg-dark-bg rounded-lg min-h-[100px] flex items-center justify-center">
+                         <p id="ai-response" class="text-sm italic">Click below for a personalized tip!</p>
+                         <div id="ai-loader" class="loader hidden"></div>
+                     </div>
+                     <button id="get-ai-tip-btn" class="mt-4 w-full bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">
+                         Get Advice
+                     </button>
+                </div>
             </div>
         </main>
     </div>
