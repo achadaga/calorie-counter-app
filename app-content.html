@@ -1,6 +1,3 @@
-<!-- This is the HTML for the main part of your application -->
-<!-- It will be loaded into the #app-container div after successful login -->
-
 <div id="main-container" class="container mx-auto max-w-lg p-4 pb-24">
     <!-- Header -->
     <header class="text-center my-6 flex justify-between items-center">
@@ -9,7 +6,7 @@
                 <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
             </button>
         </div>
-        <h1 class="text-3xl font-bold text-brand-text dark:text-dark-text w-1/3">Journey</h1>
+        <h1 id="welcome-message" class="text-3xl font-bold text-brand-text dark:text-dark-text w-1/3">Journey</h1>
         <div class="w-1/3 flex justify-end">
             <label for="theme-toggle-switch" class="flex items-center cursor-pointer">
                 <div class="relative">
@@ -21,7 +18,7 @@
         </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <main id="app-content" class="space-y-6">
         
         <!-- TODAY TAB CONTENT (Initially visible) -->
@@ -132,7 +129,7 @@
     </main>
 
     <!-- Floating Chat Button & Modal -->
-    <button id="open-chat-btn" class="chat-fab">
+     <button id="open-chat-btn" class="chat-fab">
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c.225-.01.45-.017.675-.017h3.5c.225 0 .45.007.675.017v5.714a2.25 2.25 0 01-.659 1.591L14.25 14.5M9.75 3.104a2.25 2.25 0 00-2.25 2.25v10.5a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-10.5a2.25 2.25 0 00-2.25-2.25h-3.5m-3.75 6.75h3.75"></path></svg>
     </button>
     
