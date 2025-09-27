@@ -36,7 +36,9 @@ export default async function handler(request, response) {
         
         try {
             // The 'query' object can be a simple string (for the coach) or a complex object (for the chat)
-            const payload = (typeof query === 'string') ? { contents: [{ parts: [{ text: query }] }] } : query;
+            const payload = (typeof query === 'string') 
+                ? { contents: [{ parts: [{ text: query }] }] } 
+                : query;
 
             const apiResponse = await fetch(apiUrl, {
                 method: 'POST',
