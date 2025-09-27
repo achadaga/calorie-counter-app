@@ -105,7 +105,7 @@ function initializeAppData() {
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
     
     const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had 2 idlis and a coffee'), or ask for your progress.";
-    chatHistory = [{ role: 'model', parts: [{ text: JSON.stringify({type: 'text', payload: {message: initialAiMessage}})}] }];
+    chatHistory.push({ role: 'model', parts: [{ text: JSON.stringify({type: 'text', payload: {message: initialAiMessage}})}] });
     appendMessage({ type: 'text', payload: { message: initialAiMessage } }, 'ai');
 
 
@@ -297,11 +297,11 @@ function handleLogWeight() {
 }
 
 // --- GAMIFICATION ---
-// ... (Achievement logic remains the same)
+// ... (Achievement logic)
 
 // --- API LOGIC (SECURE) ---
 async function getAICoachTip() {
-    // ... (This function remains the same)
+    // ... (AI Coach logic)
 }
 
 async function handleChatSend() {
@@ -323,7 +323,7 @@ async function handleChatSend() {
         parts: [{ text: `
             You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
             The user's health data summary is: ${healthDataSummary}.
-            You MUST respond in structured JSON format with a "type" and a "payload".
+            You MUST respond with only a single, raw JSON object, with no other text, comments, or markdown formatting around it.
 
             Available types:
             1. "text": For a standard chat response. payload: { "message": "Your text here" }.
@@ -351,8 +351,11 @@ async function handleChatSend() {
         document.getElementById(typingId)?.closest('.message-bubble-wrapper')?.remove();
 
         try {
-            const aiResponseJSON = JSON.parse(aiResponseText);
-            chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+            const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("No JSON found in response");
+            
+            const aiResponseJSON = JSON.parse(jsonMatch[0]);
+            chatHistory.push({ role: 'model', parts: [{ text: jsonMatch[0] }] });
             
             if (aiResponseJSON.type === 'food_log' && aiResponseJSON.payload) {
                 addFoodToDB(aiResponseJSON.payload);
@@ -365,7 +368,8 @@ async function handleChatSend() {
                 renderQuickReplies(aiResponseJSON.payload.quick_replies);
             }
         } catch (e) {
-            appendMessage({ type: 'text', payload: { message: "I had trouble understanding that. Could you rephrase your meal?" } }, 'ai');
+             chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+             appendMessage({ type: 'text', payload: { message: aiResponseText } }, 'ai');
         }
 
     } catch (error) {
@@ -404,10 +408,10 @@ function renderLog() {
 }
 
 function handleOpenChat() {
-    // ... (This function remains the same)
+    // ...
 }
 
 function appendMessage(data, sender) {
-    // ... (This function is now updated to handle different card types)
+    // ...
 }
 
