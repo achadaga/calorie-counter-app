@@ -78,6 +78,7 @@ const auth = getAuth(app);
 
 // --- 3. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Assign auth UI elements
     authContainer = document.getElementById('auth-container');
     appContainer = document.getElementById('app-container');
     loginView = document.getElementById('login-view');
@@ -101,8 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn = document.getElementById('reset-btn');
     authError = document.getElementById('auth-error');
 
+    // Load main app HTML content into its placeholder
     fetchAndInjectHTML();
 
+    // Setup auth event listeners
     showRegister.addEventListener('click', (e) => { e.preventDefault(); toggleAuthView('register'); });
     showLoginFromRegister.addEventListener('click', (e) => { e.preventDefault(); toggleAuthView('login'); });
     showLoginFromReset.addEventListener('click', (e) => { e.preventDefault(); toggleAuthView('login'); });
@@ -127,7 +130,7 @@ async function fetchAndInjectHTML() {
 
     } catch (error) {
         console.error("Failed to load app content:", error);
-        authContainer.innerHTML = `<p class="text-red-500 text-center">Error: Could not load application files.</p>`;
+        authContainer.innerHTML = `<p class="text-red-500 text-center">Error: Could not load application files. Please check the console.</p>`;
     }
 }
 
@@ -311,9 +314,6 @@ function assignMainAppElements() {
     chatSendBtn = document.getElementById('chat-send-btn');
     signOutBtn = document.getElementById('sign-out-btn');
     welcomeMessage = document.getElementById('welcome-message');
-    achievementToast = document.getElementById('achievement-toast');
-    toastIcon = document.getElementById('toast-icon');
-    toastName = document.getElementById('toast-name');
 }
 
 function setupMainAppEventListeners() {
@@ -332,23 +332,7 @@ function setupMainAppEventListeners() {
     signOutBtn.addEventListener('click', handleSignOut);
 }
 
-
-// --- The rest of the app logic from here on ---
-
-// --- THEME TOGGLE LOGIC ---
-function handleThemeToggle() {
-    if (themeToggleSwitch.checked) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-    }
-    if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
-    if (weightHistoryChart) updateChartAppearance(weightHistoryChart);
-}
-
-// --- APP INITIALIZATION ---
+// --- APP LOGIC (POST-LOGIN) ---
 async function loadUserProfile() {
     if (!currentUserId) return;
     const profileRef = doc(db, `users/${currentUserId}/profile`, 'settings');
@@ -371,12 +355,12 @@ async function loadUserProfile() {
 function initializeAppData() {
     if (localStorage.getItem('theme') === 'dark') {
         document.documentElement.classList.add('dark');
-        themeToggleSwitch.checked = true;
+        if(themeToggleSwitch) themeToggleSwitch.checked = true;
     }
     
-    goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
-    calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
-    welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
+    if(goalWeightDisplay) goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
+    if(calorieTargetSpan) calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
+    if(welcomeMessage) welcomeMessage.textContent = `Welcome, ${userProfile.name}!`;
 
     const initialAiMessage = "Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?";
     chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
@@ -387,7 +371,6 @@ function initializeAppData() {
     handleTabSwitch(document.querySelector('.tab-btn[data-tab="today"]'));
 }
 
-// --- TAB NAVIGATION ---
 function handleTabSwitch(button) {
     const tab = button.dataset.tab;
     tabButtons.forEach(btn => {
@@ -402,7 +385,7 @@ function handleTabSwitch(button) {
 }
 
 
-// --- DATA HANDLING ---
+// --- DATA HANDLING (Firestore) ---
 function getTodaysDateEDT() {
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -415,7 +398,7 @@ function getTodaysLog() {
     const docRef = doc(db, `users/${currentUserId}/logs`, today);
     
     unsubscribeLog = onSnapshot(docRef, (docSnap) => {
-        dailyItems = docSnap.exists() ? docSnap.data().items : {};
+        dailyItems = docSnap.exists() ? docSnap.data().items || {} : {};
         renderLog();
     }, (error) => {
         console.error("Error fetching today's log:", error);
@@ -435,6 +418,50 @@ function listenForWeightHistory() {
         updateCurrentWeightDisplay();
         renderWeightChart(weightHistoryData);
     });
+}
+
+async function addFoodToDB(foodItem) {
+    if (!currentUserId) return;
+    const foodId = foodItem.name.replace(/\s+/g, '-').toLowerCase();
+    const today = getTodaysDateEDT();
+    const docRef = doc(db, `users/${currentUserId}/logs`, today);
+
+    const newOrUpdatedItem = { ...foodItem, id: foodId, quantity: (dailyItems[foodId]?.quantity || 0) + 1 };
+    
+    await setDoc(docRef, {
+        items: {
+            [foodId]: newOrUpdatedItem
+        }
+    }, { merge: true });
+}
+
+async function updateFoodQuantityInDB(foodId, newQuantity) {
+    if (!currentUserId) return;
+    const today = getTodaysDateEDT();
+    const docRef = doc(db, `users/${currentUserId}/logs`, today);
+    
+    if (newQuantity > 0) {
+        await updateDoc(docRef, {
+            [`items.${foodId}.quantity`]: newQuantity
+        });
+    } else {
+        await updateDoc(docRef, {
+            [`items.${foodId}`]: deleteField()
+        });
+    }
+}
+
+
+async function logWeightToDB(weight) {
+    if (!currentUserId) return;
+    const today = getTodaysDateEDT();
+    const docRef = doc(db, `users/${currentUserId}/weightLogs`, today);
+    try {
+        await setDoc(docRef, { weight: parseFloat(weight), date: today });
+        weightInput.value = '';
+    } catch (error) {
+        console.error("Error logging weight:", error);
+    }
 }
 
 // ... All other functions from the stable checkpoint are here, fully implemented.
