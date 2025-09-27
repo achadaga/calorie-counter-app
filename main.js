@@ -6,7 +6,7 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
-    chatContainer, chatInput, chatSendBtn, quickRepliesContainer;
+    chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl;
 
 const userProfile = {
     name: 'User',
@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCaloriesSpan = document.getElementById('totalCalories');
     calorieTargetSpan = document.getElementById('calorieTarget');
     calorieProgressCircle = document.getElementById('calorie-progress-circle');
-    logLoader = document.getElementById('log-loader');
     emptyLogMessage = document.getElementById('empty-log-message');
     themeToggleSwitch = document.getElementById('theme-toggle-switch');
     historyBtns = document.querySelectorAll('.history-btn');
@@ -54,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     toastIcon = document.getElementById('toast-icon');
     toastName = document.getElementById('toast-name');
     quickRepliesContainer = document.getElementById('quick-replies-container');
+    calorieHistoryChartEl = document.getElementById('calorieHistoryChart');
+    weightHistoryChartEl = document.getElementById('weightHistoryChart');
     
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatSendBtn.addEventListener('click', handleChatSend);
     chatInput.addEventListener('keydown', (e) => { 
         if (e.key === 'Enter') {
-            e.preventDefault(); // Prevents adding a new line in the input
+            e.preventDefault();
             handleChatSend();
         }
     });
@@ -218,7 +219,7 @@ function renderCalorieHistoryChart(data) {
     const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
     const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = sortedDates.map(date => data[date]);
-    const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
+    const ctx = calorieHistoryChartEl.getContext('2d');
     const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
     const averageData = Array(values.length).fill(average);
 
@@ -240,7 +241,7 @@ function renderCalorieHistoryChart(data) {
 function renderWeightChart(data) {
     const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = data.map(d => d.weight);
-    const ctx = document.getElementById('weightHistoryChart').getContext('2d');
+    const ctx = weightHistoryChartEl.getContext('2d');
 
     if (weightHistoryChart) {
         weightHistoryChart.data.labels = labels;
@@ -412,6 +413,28 @@ function handleOpenChat() {
 }
 
 function appendMessage(data, sender) {
-    // ...
-}
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
+    
+    let contentHtml = '';
 
+    if (sender === 'user') {
+        messageWrapper.classList.add('justify-end');
+        contentHtml = `<div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-sm message-bubble"><p>${data.text}</p></div>`;
+    } else { // AI
+        messageWrapper.classList.add('justify-start');
+        let bubbleContent = '';
+        if (data.type === 'typing_indicator') {
+            bubbleContent = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
+        } else if (data.type === 'text' || data.type === 'confirmation') {
+            bubbleContent = `<p>${data.payload.message}</p>`;
+        } else if (data.type === 'food_log_card') {
+            bubbleContent = `<p class="font-bold mb-2">Food Logged!</p><p><strong>Item:</strong> ${data.payload.foodName}</p><p><strong>Calories:</strong> ${data.payload.calories}</p>`;
+        }
+        contentHtml = `<div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-sm message-bubble">${bubbleContent}</div>`;
+    }
+    
+    messageWrapper.innerHTML = contentHtml;
+    chatContainer.appendChild(messageWrapper);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
