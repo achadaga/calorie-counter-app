@@ -53,14 +53,11 @@
 </head>
 <body class="bg-brand-bg dark:bg-dark-bg text-brand-text dark:text-dark-text font-[Poppins] transition-colors duration-300">
 
-    <!-- NEW: Achievement Toast Notification -->
-    <div id="achievement-toast" class="achievement-toast">
-        <div class="flex items-center gap-4">
-            <span id="toast-icon" class="text-3xl">🏆</span>
-            <div>
-                <p class="font-bold">Achievement Unlocked!</p>
-                <p id="toast-name" class="text-sm">You've logged for a full week!</p>
-            </div>
+     <div id="achievement-toast" class="achievement-toast">
+        <span id="toast-icon" class="text-2xl mr-3"></span>
+        <div>
+            <p class="font-bold">Achievement Unlocked!</p>
+            <p id="toast-name" class="text-sm"></p>
         </div>
     </div>
 
@@ -109,22 +106,14 @@
                     </div>
                 </div>
 
-                <!-- Log Your Food Card -->
+                <!-- Log Your Food Card (Updated) -->
                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
                     <h2 class="text-xl font-semibold mb-4">Log Your Food</h2>
-                    <div class="relative">
-                        <input type="text" id="searchInput" placeholder="Search for food..." class="w-full p-3 pl-10 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-primary">
-                        <div id="search-loader" class="loader absolute right-3 top-1/2 -translate-y-1/2 hidden" style="width:20px; height:20px; border-width:2px;"></div>
-                    </div>
-                    <div id="searchResults" class="mt-2"></div>
-                     <div class="mt-4">
-                        <p class="text-center text-sm text-gray-400 mb-2">Or Add Manually</p>
-                        <div class="flex gap-2">
-                             <input type="text" id="manualNameInput" placeholder="Optional name" class="w-2/5 p-3 text-sm bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
-                             <input type="number" id="manualCaloriesInput" placeholder="Calories" class="w-2/5 p-3 text-sm bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
-                             <button id="add-manual-btn" class="w-1/5 bg-brand-primary hover:bg-opacity-80 text-white font-bold rounded-lg transition">Add</button>
-                         </div>
-                    </div>
+                    <p class="text-center text-gray-500 dark:text-gray-400 my-4">
+                        Log your meals by talking to your 
+                        <span class="font-semibold text-brand-primary dark:text-dark-primary">AI Health Assistant!</span> 
+                        Just tap the floating bot icon.
+                    </p>
                     <div id="daily-log-container" class="mt-6">
                          <h3 class="text-lg font-semibold mb-3">Today's Log</h3>
                          <div id="log-loader" class="flex justify-center hidden"><div class="loader"></div></div>
@@ -238,7 +227,7 @@
     </nav>
 
 
-    <script src="main.js" ></script>
+    <script src="main.js"></script>
 </body>
 </html>
 
