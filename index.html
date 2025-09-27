@@ -106,109 +106,41 @@
                     </div>
                 </div>
 
-                <!-- Log Your Food Card (Updated) -->
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Log Your Food</h2>
-                    <p class="text-center text-gray-500 dark:text-gray-400 my-4">
-                        Log your meals by talking to your 
-                        <span class="font-semibold text-brand-primary dark:text-dark-primary">AI Health Assistant!</span> 
-                        Just tap the floating bot icon.
-                    </p>
-                    <div id="daily-log-container" class="mt-6">
-                         <h3 class="text-lg font-semibold mb-3">Today's Log</h3>
-                         <div id="log-loader" class="flex justify-center hidden"><div class="loader"></div></div>
-                         <ul id="dailyLog" class="space-y-3"></ul>
-                         <p id="empty-log-message" class="text-center text-gray-500 py-4 hidden">No food logged yet.</p>
-                    </div>
+                <!-- Integrated AI Chat Card -->
+                <div class="bg-brand-surface dark:bg-dark-surface rounded-3xl shadow-lg flex flex-col h-[60vh]">
+                    <header class="p-4 border-b border-brand-subtle dark:border-dark-subtle">
+                         <h2 class="text-xl font-semibold text-center">Log Your Meal</h2>
+                    </header>
+                    <main id="chat-container" class="flex-1 p-6 overflow-y-auto space-y-6"></main>
+                    <footer class="p-4 border-t border-brand-subtle dark:border-dark-subtle">
+                         <div id="quick-replies-container" class="flex gap-2 mb-2 overflow-x-auto pb-2"></div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="chat-input" placeholder="e.g., 'I ate 2 idlis'" class="w-full p-4 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary text-lg">
+                            <button id="chat-send-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold p-4 rounded-lg transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                        </div>
+                    </footer>
+                </div>
+                
+                <!-- Today's Log List -->
+                <div id="daily-log-container" class="mt-6 bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                     <h3 class="text-lg font-semibold mb-3">Today's Log</h3>
+                     <ul id="dailyLog" class="space-y-3"></ul>
+                     <p id="empty-log-message" class="text-center text-gray-500 py-4 hidden">No food logged yet.</p>
                 </div>
             </div>
 
             <!-- DASHBOARD TAB CONTENT -->
             <div id="dashboard-tab-content" class="tab-content hidden space-y-6">
-                <!-- Weight Progress Card -->
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Weight Progress</h2>
-                     <div class="grid grid-cols-2 gap-4 text-center mb-4">
-                        <div>
-                            <p class="text-sm">Current</p>
-                            <p class="text-2xl font-bold" id="current-weight-display">-- kg</p>
-                        </div>
-                        <div>
-                            <p class="text-sm">Goal</p>
-                            <p class="text-2xl font-bold" id="goal-weight-display">-- kg</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mb-4">
-                        <input type="number" id="weightInput" step="0.1" placeholder="Log today's weight" class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-secondary dark:border-dark-secondary rounded-xl focus:ring-2 focus:ring-brand-primary">
-                        <button id="log-weight-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">Log</button>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="weightHistoryChart"></canvas>
-                    </div>
-                </div>
-                 <!-- Calorie History Card -->
-                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Calorie History</h2>
-                     <div class="flex justify-center space-x-2 mb-4">
-                        <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-brand-secondary dark:bg-dark-secondary">7 Days</button>
-                        <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">15 Days</button>
-                        <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">30 Days</button>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="calorieHistoryChart"></canvas>
-                    </div>
-                </div>
+                 <!-- Cards for charts -->
             </div>
 
             <!-- COACH TAB CONTENT -->
             <div id="coach-tab-content" class="tab-content hidden space-y-6">
-                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">Achievements</h2>
-                    <div class="grid grid-cols-3 gap-4 text-center" id="achievements-grid">
-                        <!-- Achievements will be dynamically inserted here -->
-                    </div>
-                </div>
-                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-4">AI Coach</h2>
-                    <div id="ai-response-container" class="p-4 bg-brand-bg dark:bg-dark-bg rounded-lg min-h-[100px] flex items-center justify-center">
-                         <p id="ai-response" class="text-sm italic">Click below for a personalized tip!</p>
-                         <div id="ai-loader" class="loader hidden"></div>
-                     </div>
-                     <button id="get-ai-tip-btn" class="mt-4 w-full bg-brand-primary hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition">
-                         Get Advice
-                     </button>
-                </div>
+                 <!-- Cards for achievements and AI tip -->
             </div>
-
         </main>
-
-    </div>
-
-    <!-- Floating Chat Button -->
-    <button id="open-chat-btn" class="chat-fab">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c.225-.01.45-.017.675-.017h3.5c.225 0 .45.007.675.017v5.714a2.25 2.25 0 01-.659 1.591L14.25 14.5M9.75 3.104a2.25 2.25 0 00-2.25 2.25v10.5a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-10.5a2.25 2.25 0 00-2.25-2.25h-3.5m-3.75 6.75h3.75"></path></svg>
-    </button>
-    
-    <!-- AI "Smart Assistant" Chat Modal -->
-    <div id="ai-chat-modal" class="fixed inset-0 bg-black/60 flex flex-col items-center justify-center p-4 z-50 hidden">
-         <div class="flex flex-col h-full max-h-[90vh] w-full max-w-2xl bg-brand-surface dark:bg-dark-surface shadow-lg rounded-2xl">
-            <header class="p-4 border-b border-brand-subtle dark:border-dark-subtle flex items-center justify-between">
-                <h1 class="text-xl font-bold">AI Health Assistant</h1>
-                <button id="close-chat-btn" class="p-2 rounded-full hover:bg-brand-secondary dark:hover:bg-dark-secondary">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </header>
-            <main id="chat-container" class="flex-1 p-6 overflow-y-auto space-y-6"></main>
-            <footer class="p-4 border-t border-brand-subtle dark:border-dark-subtle">
-                 <div id="quick-replies-container" class="flex gap-2 mb-2 overflow-x-auto pb-2"></div>
-                <div class="flex items-center gap-2">
-                    <input type="text" id="chat-input" placeholder="e.g., 'Log 1 cup of rice'..." class="w-full p-4 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary text-lg">
-                    <button id="chat-send-btn" class="bg-brand-primary hover:bg-opacity-80 text-white font-bold p-4 rounded-lg transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    </button>
-                </div>
-            </footer>
-        </div>
     </div>
     
      <!-- Tab Navigation -->
