@@ -1,24 +1,18 @@
 // This file acts as a secure "middleman" on Vercel's servers.
-// It receives requests from your app, adds the secret Gemini API key,
-// and then forwards the requests to the Gemini API.
 
 export default async function handler(request, response) {
-    // We only expect POST requests to this endpoint.
     if (request.method !== 'POST') {
         return response.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // The body of the request from the app will now always be for the AI.
     const { type, query } = request.body;
 
+    // This endpoint now only handles AI requests
     if (type === 'ai') {
-        // The GEMINI_API_KEY is securely pulled from your Vercel Environment Variables
         const { GEMINI_API_KEY } = process.env;
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
-            // The 'query' object from the request is the entire payload for Gemini.
-            // This can be a simple string or a complex object with conversation history.
             const payload = (typeof query === 'string') 
                 ? { contents: [{ parts: [{ text: query }] }] } 
                 : query;
@@ -30,11 +24,9 @@ export default async function handler(request, response) {
             });
 
             if (!apiResponse.ok) {
-                // If the API returns an error, forward it to the app for debugging.
                 const errorData = await apiResponse.json();
                 return response.status(apiResponse.status).json(errorData);
             }
-            
             const data = await apiResponse.json();
             return response.status(200).json(data);
         } catch (error) {
@@ -42,7 +34,7 @@ export default async function handler(request, response) {
         }
     }
 
-    // If the request type is not 'ai', return an error.
+    // If the request type is not 'ai', return an error
     return response.status(400).json({ error: 'Invalid request type' });
 }
 
