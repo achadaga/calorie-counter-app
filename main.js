@@ -6,7 +6,7 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
-    chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl;
+    chatContainer, chatInput, chatSendBtn, quickRepliesContainer;
 
 const userProfile = {
     name: 'User',
@@ -302,14 +302,43 @@ function handleLogWeight() {
 
 // --- API LOGIC (SECURE) ---
 async function getAICoachTip() {
-    // ... (AI Coach logic)
+    aiResponseEl.classList.add('hidden');
+    aiLoader.classList.remove('hidden');
+    getAiTipBtn.disabled = true;
+
+    await fetchHealthDataSummary();
+
+    const prompt = `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip (2-4 sentences) about a low-calorie Indian meal, a protein shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
+
+    try {
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'ai', query: { contents: [{ parts: [{ text: prompt }] }] } })
+        });
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const result = await response.json();
+        const jsonMatch = result.candidates[0].content.parts[0].text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            aiResponseEl.textContent = parsed.payload.message;
+        } else {
+            aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
+        }
+    } catch (error) {
+        aiResponseEl.textContent = "Could not get tip. Check API keys in Vercel.";
+    } finally {
+        aiResponseEl.classList.remove('hidden');
+        aiLoader.classList.add('hidden');
+        getAiTipBtn.disabled = false;
+    }
 }
 
 async function handleChatSend() {
     const userMessage = chatInput.value.trim();
     if (!userMessage) return;
 
-    appendMessage({ text: userMessage }, 'user');
+    appendMessage({ type:'text', payload: { message: userMessage }}, 'user');
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
     chatInput.value = '';
     chatSendBtn.disabled = true;
@@ -413,6 +442,29 @@ function handleOpenChat() {
 }
 
 function appendMessage(data, sender) {
-    // ...
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
+    
+    let contentHtml = '';
+
+    if (sender === 'user') {
+        messageWrapper.classList.add('justify-end');
+        contentHtml = `<div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-sm message-bubble"><p>${data.text}</p></div>`;
+    } else { // AI
+        messageWrapper.classList.add('justify-start');
+        let bubbleContent = '';
+        if (data.type === 'typing_indicator') {
+            bubbleContent = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
+        } else if (data.type === 'text' || data.type === 'confirmation') {
+            bubbleContent = `<p>${data.payload.message}</p>`;
+        } else if (data.type === 'food_log_card') {
+            bubbleContent = `<p class="font-bold mb-2">Food Logged!</p><p><strong>Item:</strong> ${data.payload.foodName}</p><p><strong>Calories:</strong> ${data.payload.calories}</p>`;
+        }
+        contentHtml = `<div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-sm message-bubble">${bubbleContent}</div>`;
+    }
+    
+    messageWrapper.innerHTML = contentHtml;
+    chatContainer.appendChild(messageWrapper);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
