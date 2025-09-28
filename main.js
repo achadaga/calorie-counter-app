@@ -6,7 +6,7 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
-    chatContainer, chatInput, chatSendBtn, quickRepliesContainer;
+    chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl;
 
 const userProfile = {
     name: 'User',
@@ -314,17 +314,11 @@ async function getAICoachTip() {
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'ai', query: { contents: [{ parts: [{ text: prompt }] }] } })
+            body: JSON.stringify({ type: 'ai', query: prompt })
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
-        const jsonMatch = result.candidates[0].content.parts[0].text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            aiResponseEl.textContent = parsed.payload.message;
-        } else {
-            aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
-        }
+        aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
     } catch (error) {
         aiResponseEl.textContent = "Could not get tip. Check API keys in Vercel.";
     } finally {
@@ -338,7 +332,7 @@ async function handleChatSend() {
     const userMessage = chatInput.value.trim();
     if (!userMessage) return;
 
-    appendMessage({ type:'text', payload: { message: userMessage }}, 'user');
+    appendMessage({ type: 'text', payload: { message: userMessage }}, 'user');
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
     chatInput.value = '';
     chatSendBtn.disabled = true;
