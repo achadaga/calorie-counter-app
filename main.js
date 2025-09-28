@@ -413,28 +413,6 @@ function handleOpenChat() {
 }
 
 function appendMessage(data, sender) {
-    const messageWrapper = document.createElement('div');
-    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
-    
-    let contentHtml = '';
-
-    if (sender === 'user') {
-        messageWrapper.classList.add('justify-end');
-        contentHtml = `<div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-sm message-bubble"><p>${data.text}</p></div>`;
-    } else { // AI
-        messageWrapper.classList.add('justify-start');
-        let bubbleContent = '';
-        if (data.type === 'typing_indicator') {
-            bubbleContent = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
-        } else if (data.type === 'text' || data.type === 'confirmation') {
-            bubbleContent = `<p>${data.payload.message}</p>`;
-        } else if (data.type === 'food_log_card') {
-            bubbleContent = `<p class="font-bold mb-2">Food Logged!</p><p><strong>Item:</strong> ${data.payload.foodName}</p><p><strong>Calories:</strong> ${data.payload.calories}</p>`;
-        }
-        contentHtml = `<div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-sm message-bubble">${bubbleContent}</div>`;
-    }
-    
-    messageWrapper.innerHTML = contentHtml;
-    chatContainer.appendChild(messageWrapper);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    // ...
 }
+
