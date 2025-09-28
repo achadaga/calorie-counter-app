@@ -23,6 +23,14 @@ let healthDataSummary = "No data available yet.";
 let chatHistory = [];
 let unlockedAchievements = [];
 
+const achievements = {
+    firstLog: { name: 'First Step', icon: '🎉', description: 'Log your first meal.' },
+    streak3: { name: 'On a Roll', icon: '🔥', description: 'Maintain a 3-day streak.' },
+    goalReached: { name: 'Goal Getter', icon: '🎯', description: 'Reach your weight goal.' },
+    tenLogs: { name: 'Food Explorer', icon: '🍲', description: 'Log 10 different items.' },
+    firstWeightLog: { name: 'Weight Watcher', icon: '⚖️', description: 'Log your weight for the first time.' }
+};
+
 // --- 2. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
 document.addEventListener('DOMContentLoaded', () => {
     // Assign all UI elements
@@ -111,6 +119,7 @@ function initializeAppData() {
 
 
     loadUnlockedAchievements();
+    renderAchievements();
     getTodaysLog();
     getWeightHistory();
     updateStreak();
@@ -125,16 +134,20 @@ function initializeAppData() {
 // --- TAB NAVIGATION ---
 function handleTabSwitch(button) {
     const tab = button.dataset.tab;
+    const activeClass = 'bg-brand-secondary';
+    const darkActiveClass = 'dark:bg-dark-secondary';
+
     tabButtons.forEach(btn => {
-        btn.classList.remove('active');
+        btn.classList.remove('active', activeClass, darkActiveClass);
         btn.classList.add('text-gray-400');
     });
-    button.classList.add('active');
+    button.classList.add('active', activeClass, darkActiveClass);
     button.classList.remove('text-gray-400');
     tabContents.forEach(content => {
         content.id === `${tab}-tab-content` ? content.classList.remove('hidden') : content.classList.add('hidden');
     });
 }
+
 
 // --- LOCAL STORAGE DATA HANDLING ---
 function getTodaysDateEDT() {
@@ -164,7 +177,7 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
-    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase();
+    const foodId = (foodItem.foodName || 'unknown').replace(/\s+/g, '-').toLowerCase();
     if (dailyItems[foodId]) {
         dailyItems[foodId].quantity += foodItem.quantity;
     } else {
@@ -281,26 +294,138 @@ function updateChartAppearance(chart) {
 
     if (chart.config.type === 'line') {
         chart.data.datasets[0].backgroundColor = primaryBgColor;
+        chart.data.datasets[0].fill = true;
     }
     chart.update();
 }
 
+
 function handleHistoryButtonClick(btn) {
     const days = parseInt(btn.dataset.days);
+    const activeClass = 'bg-brand-secondary';
+    const darkActiveClass = 'dark:bg-dark-secondary';
     fetchCalorieHistory(days);
-    historyBtns.forEach(b => b.classList.remove('bg-brand-secondary', 'dark:bg-dark-secondary'));
-    btn.classList.add('bg-brand-secondary', 'dark:bg-dark-secondary');
+    historyBtns.forEach(b => b.classList.remove(activeClass, darkActiveClass));
+    btn.classList.add(activeClass, darkActiveClass);
 }
 
 function handleLogWeight() {
     const weight = weightInput.value;
-    if (weight) logWeightToDB(weight);
+    if (weight && !isNaN(weight)) logWeightToDB(weight);
 }
 
 // --- GAMIFICATION ---
-// ... (Achievement logic)
+function checkAndUnlockAchievements() {
+    // First log
+    if (Object.keys(dailyItems).length > 0) {
+        unlockAchievement('firstLog');
+    }
+    // Ten unique logs
+    const allLogs = Object.keys(localStorage).filter(k => k.startsWith('log_'));
+    const uniqueFoods = new Set();
+    allLogs.forEach(logKey => {
+        const log = JSON.parse(localStorage.getItem(logKey) || '{}');
+        Object.keys(log).forEach(foodId => uniqueFoods.add(foodId));
+    });
+    if (uniqueFoods.size >= 10) {
+        unlockAchievement('tenLogs');
+    }
+    // Weight goal reached
+    if (weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight) {
+        unlockAchievement('goalReached');
+    }
+    // First weight log
+    if (weightHistoryData.length > 0) {
+        unlockAchievement('firstWeightLog');
+    }
+    // 3-day streak
+    if (calculateStreak() >= 3) {
+        unlockAchievement('streak3');
+    }
+}
+
+function unlockAchievement(id) {
+    if (!unlockedAchievements.includes(id)) {
+        unlockedAchievements.push(id);
+        localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+        showAchievementToast(id);
+        renderAchievements();
+    }
+}
+
+function loadUnlockedAchievements() {
+    const saved = localStorage.getItem('unlockedAchievements');
+    unlockedAchievements = saved ? JSON.parse(saved) : [];
+}
+
+function renderAchievements() {
+    achievementsGrid.innerHTML = '';
+    for (const id in achievements) {
+        const achievement = achievements[id];
+        const isUnlocked = unlockedAchievements.includes(id);
+        const badge = document.createElement('div');
+        badge.className = `achievement-badge p-4 rounded-xl flex flex-col items-center justify-center ${isUnlocked ? 'unlocked' : ''}`;
+        badge.innerHTML = `
+            <div class="text-4xl mb-2">${achievement.icon}</div>
+            <p class="font-semibold text-sm">${achievement.name}</p>
+        `;
+        badge.title = achievement.description;
+        achievementsGrid.appendChild(badge);
+    }
+}
+
+function showAchievementToast(id) {
+    const achievement = achievements[id];
+    toastIcon.textContent = achievement.icon;
+    toastName.textContent = achievement.name;
+    achievementToast.classList.add('show');
+    setTimeout(() => {
+        achievementToast.classList.remove('show');
+    }, 4000);
+}
+
+function calculateStreak() {
+    let streak = 0;
+    let daysChecked = 0;
+    const today = new Date();
+    
+    while (true) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - daysChecked);
+        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+        const log = localStorage.getItem(`log_${dateString}`);
+        if (log && Object.keys(JSON.parse(log)).length > 0) {
+            streak++;
+            daysChecked++;
+        } else {
+            break;
+        }
+    }
+    return streak;
+}
+
+function updateStreak() {
+    const currentStreak = calculateStreak();
+    if (currentStreak > 0) {
+        streakDays.textContent = `${currentStreak} day${currentStreak > 1 ? 's' : ''}`;
+        streakCounter.classList.remove('hidden');
+    } else {
+        streakCounter.classList.add('hidden');
+    }
+}
 
 // --- API LOGIC (SECURE) ---
+async function fetchHealthDataSummary() {
+    const totalCaloriesToday = Object.values(dailyItems).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
+    const currentWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length - 1].weight : userProfile.startWeight;
+    healthDataSummary = `
+        Today's calories: ${Math.round(totalCaloriesToday)} / ${userProfile.calorieTarget} kcal.
+        Current weight: ${currentWeight} kg.
+        Goal weight: ${userProfile.goalWeight} kg.
+        Streak: ${calculateStreak()} days.
+    `;
+}
+
 async function getAICoachTip() {
     aiResponseEl.classList.add('hidden');
     aiLoader.classList.remove('hidden');
@@ -308,7 +433,7 @@ async function getAICoachTip() {
 
     await fetchHealthDataSummary();
 
-    const prompt = `You are a friendly AI nutrition coach. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip.`;
+    const prompt = `You are a friendly and encouraging AI nutrition coach. Based on the user's current health data, provide a short (1-2 sentences), actionable, and motivational tip. Do not repeat the user's data back to them. Health Data: ${healthDataSummary}.`;
 
     try {
         const response = await fetch('/api/search', {
@@ -318,9 +443,11 @@ async function getAICoachTip() {
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
-        aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
+        const tip = result.candidates[0].content.parts[0].text;
+        aiResponseEl.textContent = tip;
     } catch (error) {
-        aiResponseEl.textContent = "Could not get tip. Please try again.";
+        console.error("AI Coach Tip Error:", error);
+        aiResponseEl.textContent = "Could not get a tip right now. Please check your connection and try again.";
     } finally {
         aiResponseEl.classList.remove('hidden');
         aiLoader.classList.add('hidden');
@@ -343,23 +470,24 @@ async function handleChatSend() {
 
     await fetchHealthDataSummary();
 
-    const systemInstruction = {
+    const system_instruction = {
         parts: [{ text: `
             You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
             The user's health data summary is: ${healthDataSummary}.
             You MUST respond with only a single, raw JSON object, with no other text, comments, or markdown formatting around it.
+            Your response must be perfectly formatted JSON.
 
             Available types:
-            1. "text": For a standard chat response. payload: { "message": "Your text here" }.
+            1. "text": For a standard chat response or to answer a question. payload: { "message": "Your text here" }.
             2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories. Respond with a food_log. payload: { "foodName": "User's description (e.g., Two rotis and dal)", "calories": ESTIMATED_CALORIES, "quantity": 1 }.
-            3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No"] }.
+            3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No", "Cancel"] }.
 
-            Analyze the user's message ("${userMessage}"), determine the intent (log food or just chat), and generate the correct JSON response.
+            Analyze the user's message ("${userMessage}"), determine the intent (log food, ask question, or just chat), and generate the correct JSON response.
         `}]
     };
 
     try {
-        const payload = { contents: chatHistory, systemInstruction: systemInstruction };
+        const payload = { contents: chatHistory, system_instruction };
         
         const response = await fetch('/api/search', {
             method: 'POST',
@@ -367,7 +495,10 @@ async function handleChatSend() {
             body: JSON.stringify({ type: 'ai', query: payload })
         });
         
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+        if (!response.ok) {
+            const errorDetails = await response.text();
+            throw new Error(`API Error: ${response.status} - ${errorDetails}`);
+        }
         
         const result = await response.json();
         const aiResponseText = result.candidates[0].content.parts[0].text;
@@ -392,8 +523,9 @@ async function handleChatSend() {
                 renderQuickReplies(aiResponseJSON.payload.quick_replies);
             }
         } catch (e) {
-             chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
-             appendMessage({ type: 'text', payload: { message: aiResponseText } }, 'ai');
+             console.error("JSON Parsing Error or invalid structure:", e, "Raw Response:", aiResponseText);
+             chatHistory.push({ role: 'model', parts: [{ text: JSON.stringify({type:'text', payload:{message: aiResponseText}})}] });
+             appendMessage({ type: 'text', payload: { message: "I received a response I couldn't understand. Can you rephrase?" } }, 'ai');
         }
 
     } catch (error) {
@@ -402,6 +534,7 @@ async function handleChatSend() {
         appendMessage({ type: 'text', payload: { message: "Sorry, I couldn't connect. Please try again." } }, 'ai');
     } finally {
         chatSendBtn.disabled = false;
+        chatInput.focus();
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 }
@@ -411,17 +544,17 @@ function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
     const items = Object.values(dailyItems);
-    emptyLogMessage.classList.toggle('hidden', items.length > 0);
+    emptyLogMessage.classList.toggle('hidden', items.length === 0);
     
     items.forEach(item => {
         const listItem = document.createElement('li');
         listItem.className = 'p-3 bg-brand-bg dark:bg-dark-bg rounded-xl flex justify-between items-center';
         listItem.innerHTML = `
             <div>
-                <p class="font-semibold">${item.foodName || item.name}</p>
-                <p class="text-sm">${item.calories} kcal</p>
+                <p class="font-semibold capitalize">${item.foodName || item.name}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">${item.calories} kcal</p>
             </div>
-            <div class="font-bold text-lg">x${item.quantity}</div>
+            <div class="font-bold text-lg text-brand-text dark:text-dark-text">x${item.quantity}</div>
         `;
         dailyLog.appendChild(listItem);
         total += item.calories * item.quantity;
@@ -431,11 +564,54 @@ function renderLog() {
     calorieProgressCircle.style.strokeDasharray = `${percentage}, 100`;
 }
 
-function handleOpenChat() {
-    // ...
+function renderQuickReplies(replies) {
+    quickRepliesContainer.innerHTML = '';
+    replies.forEach(reply => {
+        const button = document.createElement('button');
+        button.className = 'quick-reply-btn bg-brand-secondary dark:bg-dark-secondary text-brand-text dark:text-dark-text px-3 py-1 rounded-full text-sm';
+        button.textContent = reply;
+        quickRepliesContainer.appendChild(button);
+    });
 }
 
 function appendMessage(data, sender) {
-    // ...
-}
+    const wrapper = document.createElement('div');
+    wrapper.className = `message-bubble-wrapper flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
 
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble max-w-xs md:max-w-md p-4 rounded-2xl ${
+        sender === 'user'
+            ? 'bg-brand-primary text-white rounded-br-lg'
+            : 'bg-brand-surface dark:bg-dark-surface rounded-bl-lg'
+    }`;
+
+    switch (data.type) {
+        case 'text':
+            bubble.textContent = data.payload.message;
+            break;
+        case 'food_log_card':
+            bubble.innerHTML = `
+                <p class="font-semibold">Logged!</p>
+                <p class="capitalize">${data.payload.foodName}</p>
+                <p class="font-bold">${data.payload.calories} kcal</p>
+            `;
+            break;
+        case 'confirmation':
+            bubble.textContent = data.payload.message;
+            break;
+        case 'typing_indicator':
+            bubble.id = data.id;
+            bubble.innerHTML = `
+                <div class="typing-loader">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            break;
+        default:
+            bubble.textContent = 'Received an unknown message type.';
+    }
+
+    wrapper.appendChild(bubble);
+    chatContainer.appendChild(wrapper);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
