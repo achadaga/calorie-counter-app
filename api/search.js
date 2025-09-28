@@ -10,8 +10,8 @@ export default async function handler(request, response) {
     // This endpoint now only handles AI requests
     if (type === 'ai') {
         const { GEMINI_API_KEY } = process.env;
-        // CORRECTED: Using a specific and stable model version identifier.
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${GEMINI_API_KEY}`;
+        // CORRECTED: Changed the API endpoint from v1beta to the stable v1 and using the standard 'gemini-pro' model.
+        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
             const payload = (typeof query === 'string') 
