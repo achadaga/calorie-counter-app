@@ -10,8 +10,8 @@ export default async function handler(request, response) {
     // This endpoint now only handles AI requests
     if (type === 'ai') {
         const { GEMINI_API_KEY } = process.env;
-        // CORRECTED: Updated to a stable and valid model name to fix the 404 error.
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+        // CORRECTED: Using a specific and stable model version identifier.
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
             const payload = (typeof query === 'string') 
