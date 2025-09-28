@@ -14,6 +14,20 @@ const userProfile = {
     goalWeight: 76,
     calorieTarget: 1850
 };
+
+// Gamification Achievements
+const achievements = [
+    { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
+    { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
+    { id: 'streak7', name: '7-Day Streak', icon: '🏆', condition: () => calculateStreak() >= 7 },
+    { id: 'lose1kg', name: 'Lost 1kg', icon: '💪', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 1 },
+    { id: 'goal', name: 'Goal Getter', icon: '🥇', condition: () => weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight },
+    { id: 'weightLog1', name: 'First Weigh-in', icon: '⚖️', condition: () => weightHistoryData.length >= 1 },
+    { id: 'perfectDay', name: 'Perfect Day', icon: '🎯', condition: () => { const today = getTodaysDateEDT(); const log = localStorage.getItem(`log_${today}`); if (!log) return false; const items = JSON.parse(log); const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0); return total > 0 && total <= userProfile.calorieTarget; }},
+    { id: 'chat1', name: 'Curious Mind', icon: '💬', condition: () => chatHistory.length > 2 },
+];
+
+
 let dailyItems = {};
 let calorieHistoryData = {};
 let weightHistoryData = [];
@@ -22,14 +36,6 @@ let weightHistoryChart = null;
 let healthDataSummary = "No data available yet.";
 let chatHistory = [];
 let unlockedAchievements = [];
-
-const achievements = {
-    firstLog: { name: 'First Step', icon: '🎉', description: 'Log your first meal.' },
-    streak3: { name: 'On a Roll', icon: '🔥', description: 'Maintain a 3-day streak.' },
-    goalReached: { name: 'Goal Getter', icon: '🎯', description: 'Reach your weight goal.' },
-    tenLogs: { name: 'Food Explorer', icon: '🍲', description: 'Log 10 different items.' },
-    firstWeightLog: { name: 'Weight Watcher', icon: '⚖️', description: 'Log your weight for the first time.' }
-};
 
 // --- 2. WAIT FOR DOM TO LOAD, THEN INITIALIZE APP ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -119,7 +125,6 @@ function initializeAppData() {
 
 
     loadUnlockedAchievements();
-    renderAchievements();
     getTodaysLog();
     getWeightHistory();
     updateStreak();
@@ -134,20 +139,16 @@ function initializeAppData() {
 // --- TAB NAVIGATION ---
 function handleTabSwitch(button) {
     const tab = button.dataset.tab;
-    const activeClass = 'bg-brand-secondary';
-    const darkActiveClass = 'dark:bg-dark-secondary';
-
     tabButtons.forEach(btn => {
-        btn.classList.remove('active', activeClass, darkActiveClass);
+        btn.classList.remove('active');
         btn.classList.add('text-gray-400');
     });
-    button.classList.add('active', activeClass, darkActiveClass);
+    button.classList.add('active');
     button.classList.remove('text-gray-400');
     tabContents.forEach(content => {
         content.id === `${tab}-tab-content` ? content.classList.remove('hidden') : content.classList.add('hidden');
     });
 }
-
 
 // --- LOCAL STORAGE DATA HANDLING ---
 function getTodaysDateEDT() {
@@ -177,7 +178,7 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
-    const foodId = (foodItem.foodName || 'unknown').replace(/\s+/g, '-').toLowerCase();
+    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase();
     if (dailyItems[foodId]) {
         dailyItems[foodId].quantity += foodItem.quantity;
     } else {
@@ -294,88 +295,88 @@ function updateChartAppearance(chart) {
 
     if (chart.config.type === 'line') {
         chart.data.datasets[0].backgroundColor = primaryBgColor;
-        chart.data.datasets[0].fill = true;
     }
     chart.update();
 }
 
-
 function handleHistoryButtonClick(btn) {
     const days = parseInt(btn.dataset.days);
-    const activeClass = 'bg-brand-secondary';
-    const darkActiveClass = 'dark:bg-dark-secondary';
     fetchCalorieHistory(days);
-    historyBtns.forEach(b => b.classList.remove(activeClass, darkActiveClass));
-    btn.classList.add(activeClass, darkActiveClass);
+    historyBtns.forEach(b => b.classList.remove('bg-brand-secondary', 'dark:bg-dark-secondary'));
+    btn.classList.add('bg-brand-secondary', 'dark:bg-dark-secondary');
 }
 
 function handleLogWeight() {
     const weight = weightInput.value;
-    if (weight && !isNaN(weight)) logWeightToDB(weight);
+    if (weight) logWeightToDB(weight);
 }
 
 // --- GAMIFICATION ---
-function checkAndUnlockAchievements() {
-    // First log
-    if (Object.keys(dailyItems).length > 0) {
-        unlockAchievement('firstLog');
-    }
-    // Ten unique logs
-    const allLogs = Object.keys(localStorage).filter(k => k.startsWith('log_'));
-    const uniqueFoods = new Set();
-    allLogs.forEach(logKey => {
-        const log = JSON.parse(localStorage.getItem(logKey) || '{}');
-        Object.keys(log).forEach(foodId => uniqueFoods.add(foodId));
-    });
-    if (uniqueFoods.size >= 10) {
-        unlockAchievement('tenLogs');
-    }
-    // Weight goal reached
-    if (weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight) {
-        unlockAchievement('goalReached');
-    }
-    // First weight log
-    if (weightHistoryData.length > 0) {
-        unlockAchievement('firstWeightLog');
-    }
-    // 3-day streak
-    if (calculateStreak() >= 3) {
-        unlockAchievement('streak3');
-    }
-}
-
-function unlockAchievement(id) {
-    if (!unlockedAchievements.includes(id)) {
-        unlockedAchievements.push(id);
-        localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
-        showAchievementToast(id);
-        renderAchievements();
-    }
-}
-
 function loadUnlockedAchievements() {
     const saved = localStorage.getItem('unlockedAchievements');
     unlockedAchievements = saved ? JSON.parse(saved) : [];
+    renderAchievements();
+}
+
+function saveUnlockedAchievements() {
+    localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+}
+
+function checkAndUnlockAchievements() {
+    achievements.forEach(ach => {
+        if (!unlockedAchievements.includes(ach.id)) {
+            if (ach.condition()) {
+                unlockedAchievements.push(ach.id);
+                saveUnlockedAchievements();
+                showAchievementToast(ach);
+            }
+        }
+    });
+    renderAchievements(); 
+    updateStreak();
 }
 
 function renderAchievements() {
     achievementsGrid.innerHTML = '';
-    for (const id in achievements) {
-        const achievement = achievements[id];
-        const isUnlocked = unlockedAchievements.includes(id);
-        const badge = document.createElement('div');
-        badge.className = `achievement-badge p-4 rounded-xl flex flex-col items-center justify-center ${isUnlocked ? 'unlocked' : ''}`;
-        badge.innerHTML = `
-            <div class="text-4xl mb-2">${achievement.icon}</div>
-            <p class="font-semibold text-sm">${achievement.name}</p>
+    achievements.forEach(ach => {
+        const isUnlocked = unlockedAchievements.includes(ach.id);
+        const div = document.createElement('div');
+        div.className = `achievement-badge ${isUnlocked ? 'unlocked' : ''} p-4 bg-brand-bg dark:bg-dark-bg rounded-2xl flex flex-col items-center justify-center gap-2`;
+        div.innerHTML = `
+            <span class="text-4xl">${ach.icon}</span>
+            <span class="text-xs font-semibold text-center">${ach.name}</span>
         `;
-        badge.title = achievement.description;
-        achievementsGrid.appendChild(badge);
+        achievementsGrid.appendChild(div);
+    });
+}
+
+function calculateStreak() {
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d).split('T')[0];
+        const log = localStorage.getItem(`log_${dateString}`);
+        if (log && Object.keys(JSON.parse(log)).length > 0) {
+            streak++;
+        } else {
+            if (i > 0) break; 
+        }
+    }
+    return streak;
+}
+
+function updateStreak() {
+    const streak = calculateStreak();
+    if (streak > 0) {
+        streakDays.textContent = `${streak}-Day Streak`;
+        streakCounter.classList.remove('hidden');
+    } else {
+        streakCounter.classList.add('hidden');
     }
 }
 
-function showAchievementToast(id) {
-    const achievement = achievements[id];
+function showAchievementToast(achievement) {
     toastIcon.textContent = achievement.icon;
     toastName.textContent = achievement.name;
     achievementToast.classList.add('show');
@@ -384,48 +385,8 @@ function showAchievementToast(id) {
     }, 4000);
 }
 
-function calculateStreak() {
-    let streak = 0;
-    let daysChecked = 0;
-    const today = new Date();
-    
-    while (true) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - daysChecked);
-        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-        const log = localStorage.getItem(`log_${dateString}`);
-        if (log && Object.keys(JSON.parse(log)).length > 0) {
-            streak++;
-            daysChecked++;
-        } else {
-            break;
-        }
-    }
-    return streak;
-}
-
-function updateStreak() {
-    const currentStreak = calculateStreak();
-    if (currentStreak > 0) {
-        streakDays.textContent = `${currentStreak} day${currentStreak > 1 ? 's' : ''}`;
-        streakCounter.classList.remove('hidden');
-    } else {
-        streakCounter.classList.add('hidden');
-    }
-}
 
 // --- API LOGIC (SECURE) ---
-async function fetchHealthDataSummary() {
-    const totalCaloriesToday = Object.values(dailyItems).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
-    const currentWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length - 1].weight : userProfile.startWeight;
-    healthDataSummary = `
-        Today's calories: ${Math.round(totalCaloriesToday)} / ${userProfile.calorieTarget} kcal.
-        Current weight: ${currentWeight} kg.
-        Goal weight: ${userProfile.goalWeight} kg.
-        Streak: ${calculateStreak()} days.
-    `;
-}
-
 async function getAICoachTip() {
     aiResponseEl.classList.add('hidden');
     aiLoader.classList.remove('hidden');
@@ -433,7 +394,7 @@ async function getAICoachTip() {
 
     await fetchHealthDataSummary();
 
-    const prompt = `You are a friendly and encouraging AI nutrition coach. Based on the user's current health data, provide a short (1-2 sentences), actionable, and motivational tip. Do not repeat the user's data back to them. Health Data: ${healthDataSummary}.`;
+    const prompt = `You are a friendly AI nutrition coach. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip.`;
 
     try {
         const response = await fetch('/api/search', {
@@ -443,11 +404,9 @@ async function getAICoachTip() {
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
-        const tip = result.candidates[0].content.parts[0].text;
-        aiResponseEl.textContent = tip;
+        aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
     } catch (error) {
-        console.error("AI Coach Tip Error:", error);
-        aiResponseEl.textContent = "Could not get a tip right now. Please check your connection and try again.";
+        aiResponseEl.textContent = "Could not get tip. Please try again.";
     } finally {
         aiResponseEl.classList.remove('hidden');
         aiLoader.classList.add('hidden');
@@ -469,25 +428,25 @@ async function handleChatSend() {
     appendMessage({ type: 'typing_indicator', id: typingId }, 'ai');
 
     await fetchHealthDataSummary();
-
-    const system_instruction = {
+    
+    // CORRECTED: Changed system_instruction back to systemInstruction
+    const systemInstruction = {
         parts: [{ text: `
             You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
             The user's health data summary is: ${healthDataSummary}.
             You MUST respond with only a single, raw JSON object, with no other text, comments, or markdown formatting around it.
-            Your response must be perfectly formatted JSON.
 
             Available types:
-            1. "text": For a standard chat response or to answer a question. payload: { "message": "Your text here" }.
+            1. "text": For a standard chat response. payload: { "message": "Your text here" }.
             2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories. Respond with a food_log. payload: { "foodName": "User's description (e.g., Two rotis and dal)", "calories": ESTIMATED_CALORIES, "quantity": 1 }.
-            3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No", "Cancel"] }.
+            3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No"] }.
 
-            Analyze the user's message ("${userMessage}"), determine the intent (log food, ask question, or just chat), and generate the correct JSON response.
+            Analyze the user's message ("${userMessage}"), determine the intent (log food or just chat), and generate the correct JSON response.
         `}]
     };
 
     try {
-        const payload = { contents: chatHistory, system_instruction };
+        const payload = { contents: chatHistory, systemInstruction: systemInstruction };
         
         const response = await fetch('/api/search', {
             method: 'POST',
@@ -495,10 +454,7 @@ async function handleChatSend() {
             body: JSON.stringify({ type: 'ai', query: payload })
         });
         
-        if (!response.ok) {
-            const errorDetails = await response.text();
-            throw new Error(`API Error: ${response.status} - ${errorDetails}`);
-        }
+        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
         
         const result = await response.json();
         const aiResponseText = result.candidates[0].content.parts[0].text;
@@ -523,9 +479,8 @@ async function handleChatSend() {
                 renderQuickReplies(aiResponseJSON.payload.quick_replies);
             }
         } catch (e) {
-             console.error("JSON Parsing Error or invalid structure:", e, "Raw Response:", aiResponseText);
-             chatHistory.push({ role: 'model', parts: [{ text: JSON.stringify({type:'text', payload:{message: aiResponseText}})}] });
-             appendMessage({ type: 'text', payload: { message: "I received a response I couldn't understand. Can you rephrase?" } }, 'ai');
+             chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+             appendMessage({ type: 'text', payload: { message: aiResponseText } }, 'ai');
         }
 
     } catch (error) {
@@ -534,8 +489,8 @@ async function handleChatSend() {
         appendMessage({ type: 'text', payload: { message: "Sorry, I couldn't connect. Please try again." } }, 'ai');
     } finally {
         chatSendBtn.disabled = false;
-        chatInput.focus();
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        checkAndUnlockAchievements();
     }
 }
 
@@ -544,17 +499,17 @@ function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
     const items = Object.values(dailyItems);
-    emptyLogMessage.classList.toggle('hidden', items.length === 0);
+    emptyLogMessage.classList.toggle('hidden', items.length > 0);
     
     items.forEach(item => {
         const listItem = document.createElement('li');
         listItem.className = 'p-3 bg-brand-bg dark:bg-dark-bg rounded-xl flex justify-between items-center';
         listItem.innerHTML = `
             <div>
-                <p class="font-semibold capitalize">${item.foodName || item.name}</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">${item.calories} kcal</p>
+                <p class="font-semibold">${item.foodName || item.name}</p>
+                <p class="text-sm">${item.calories} kcal</p>
             </div>
-            <div class="font-bold text-lg text-brand-text dark:text-dark-text">x${item.quantity}</div>
+            <div class="font-bold text-lg">x${item.quantity}</div>
         `;
         dailyLog.appendChild(listItem);
         total += item.calories * item.quantity;
@@ -564,54 +519,94 @@ function renderLog() {
     calorieProgressCircle.style.strokeDasharray = `${percentage}, 100`;
 }
 
+// --- HELPER & UI FUNCTIONS (RESTORED) ---
+async function fetchHealthDataSummary() {
+    let calorieHistoryText = "Recent calorie history:\n";
+    for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d);
+        const savedLog = localStorage.getItem(`log_${dateString}`);
+        const items = savedLog ? JSON.parse(savedLog) : {};
+        const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
+        calorieHistoryText += `- ${dateString}: ${total} kcal\n`;
+    }
+    
+    const savedWeightHistory = localStorage.getItem('weightHistory');
+    const weights = savedWeightHistory ? JSON.parse(savedWeightHistory) : [];
+    let weightHistoryText = "Recent weight history:\n";
+    weights.forEach(w => {
+        weightHistoryText += `- ${w.date}: ${w.weight} kg\n`;
+    });
+    
+    const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : userProfile.startWeight;
+
+    healthDataSummary = `
+        User Profile and Goals:
+        - Name: ${userProfile.name}
+        - Starting Weight: ${userProfile.startWeight} kg
+        - Current Weight: ${latestWeight} kg
+        - Goal Weight: ${userProfile.goalWeight} kg
+        - Daily Calorie Target: ${userProfile.calorieTarget} kcal
+        
+        ${calorieHistoryText}
+        ${weightHistoryText}
+    `;
+}
+
 function renderQuickReplies(replies) {
     quickRepliesContainer.innerHTML = '';
     replies.forEach(reply => {
         const button = document.createElement('button');
-        button.className = 'quick-reply-btn bg-brand-secondary dark:bg-dark-secondary text-brand-text dark:text-dark-text px-3 py-1 rounded-full text-sm';
+        button.className = 'quick-reply-btn';
         button.textContent = reply;
         quickRepliesContainer.appendChild(button);
     });
 }
 
 function appendMessage(data, sender) {
-    const wrapper = document.createElement('div');
-    wrapper.className = `message-bubble-wrapper flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3 w-full';
+    
+    if (sender === 'user') {
+        messageWrapper.classList.add('justify-end');
+        messageWrapper.innerHTML = `
+            <div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-xs md:max-w-md message-bubble">
+                <p>${data.payload.message}</p>
+            </div>
+        `;
+    } else { // AI
+        messageWrapper.classList.add('justify-start');
+        let contentHTML = '';
 
-    const bubble = document.createElement('div');
-    bubble.className = `message-bubble max-w-xs md:max-w-md p-4 rounded-2xl ${
-        sender === 'user'
-            ? 'bg-brand-primary text-white rounded-br-lg'
-            : 'bg-brand-surface dark:bg-dark-surface rounded-bl-lg'
-    }`;
-
-    switch (data.type) {
-        case 'text':
-            bubble.textContent = data.payload.message;
-            break;
-        case 'food_log_card':
-            bubble.innerHTML = `
-                <p class="font-semibold">Logged!</p>
-                <p class="capitalize">${data.payload.foodName}</p>
-                <p class="font-bold">${data.payload.calories} kcal</p>
-            `;
-            break;
-        case 'confirmation':
-            bubble.textContent = data.payload.message;
-            break;
-        case 'typing_indicator':
-            bubble.id = data.id;
-            bubble.innerHTML = `
-                <div class="typing-loader">
-                    <span></span><span></span><span></span>
-                </div>
-            `;
-            break;
-        default:
-            bubble.textContent = 'Received an unknown message type.';
+        switch (data.type) {
+            case 'text':
+                contentHTML = `<p>${data.payload.message}</p>`;
+                break;
+            case 'typing_indicator':
+                contentHTML = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
+                break;
+            case 'food_log_card':
+                contentHTML = `
+                    <div class="p-3 bg-brand-secondary/50 dark:bg-dark-secondary/50 rounded-lg border border-brand-primary dark:border-dark-primary">
+                        <p class="font-semibold">✅ Logged!</p>
+                        <p class="text-sm">${data.payload.foodName} - ${data.payload.calories} kcal</p>
+                    </div>`;
+                break;
+             case 'confirmation':
+                contentHTML = `<p>${data.payload.message}</p>`;
+                break;
+            default:
+                 contentHTML = `<p>Received an unknown message type.</p>`
+        }
+        
+        messageWrapper.innerHTML = `
+            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-xs md:max-w-md message-bubble">
+                ${contentHTML}
+            </div>
+        `;
     }
-
-    wrapper.appendChild(bubble);
-    chatContainer.appendChild(wrapper);
+    chatContainer.appendChild(messageWrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+
