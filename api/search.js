@@ -10,7 +10,8 @@ export default async function handler(request, response) {
     // This endpoint now only handles AI requests
     if (type === 'ai') {
         const { GEMINI_API_KEY } = process.env;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+        // CORRECTED: Updated to a valid and current model name
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
             const payload = (typeof query === 'string') 
@@ -25,11 +26,13 @@ export default async function handler(request, response) {
 
             if (!apiResponse.ok) {
                 const errorData = await apiResponse.json();
+                console.error("API Error Response:", errorData);
                 return response.status(apiResponse.status).json(errorData);
             }
             const data = await apiResponse.json();
             return response.status(200).json(data);
         } catch (error) {
+            console.error("Server-side Fetch Error:", error);
             return response.status(500).json({ error: 'Failed to fetch from Gemini API' });
         }
     }
@@ -37,4 +40,3 @@ export default async function handler(request, response) {
     // If the request type is not 'ai', return an error
     return response.status(400).json({ error: 'Invalid request type' });
 }
-
