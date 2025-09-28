@@ -308,7 +308,7 @@ async function getAICoachTip() {
 
     await fetchHealthDataSummary();
 
-    const prompt = `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip (2-4 sentences) about a low-calorie Indian meal, a protein shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
+    const prompt = `You are a friendly AI nutrition coach. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip.`;
 
     try {
         const response = await fetch('/api/search', {
@@ -320,7 +320,7 @@ async function getAICoachTip() {
         const result = await response.json();
         aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
     } catch (error) {
-        aiResponseEl.textContent = "Could not get tip. Check API keys in Vercel.";
+        aiResponseEl.textContent = "Could not get tip. Please try again.";
     } finally {
         aiResponseEl.classList.remove('hidden');
         aiLoader.classList.add('hidden');
@@ -436,29 +436,6 @@ function handleOpenChat() {
 }
 
 function appendMessage(data, sender) {
-    const messageWrapper = document.createElement('div');
-    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
-    
-    let contentHtml = '';
-
-    if (sender === 'user') {
-        messageWrapper.classList.add('justify-end');
-        contentHtml = `<div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-sm message-bubble"><p>${data.text}</p></div>`;
-    } else { // AI
-        messageWrapper.classList.add('justify-start');
-        let bubbleContent = '';
-        if (data.type === 'typing_indicator') {
-            bubbleContent = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
-        } else if (data.type === 'text' || data.type === 'confirmation') {
-            bubbleContent = `<p>${data.payload.message}</p>`;
-        } else if (data.type === 'food_log_card') {
-            bubbleContent = `<p class="font-bold mb-2">Food Logged!</p><p><strong>Item:</strong> ${data.payload.foodName}</p><p><strong>Calories:</strong> ${data.payload.calories}</p>`;
-        }
-        contentHtml = `<div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-sm message-bubble">${bubbleContent}</div>`;
-    }
-    
-    messageWrapper.innerHTML = contentHtml;
-    chatContainer.appendChild(messageWrapper);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    // ...
 }
 
