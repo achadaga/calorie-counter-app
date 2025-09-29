@@ -7,22 +7,20 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
     chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl,
-    nutritionChartEl, nutritionNoticeEl; // New elements
+    nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder; // New elements
 
 const userProfile = {
     name: 'User',
     startWeight: 87.5,
     goalWeight: 76,
     calorieTarget: 1850,
-    // NEW: Recommended daily macro targets in grams
     macroTargets: {
-        protein: 139, // 30% of 1850 kcal
-        carbs: 185,   // 40% of 1850 kcal
-        fats: 62      // 30% of 1850 kcal
+        protein: 139, 
+        carbs: 185,   
+        fats: 62      
     }
 };
 
-// Gamification Achievements
 const achievements = [
     { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
     { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
@@ -34,13 +32,12 @@ const achievements = [
     { id: 'chat1', name: 'Curious Mind', icon: '💬', condition: () => chatHistory.length > 2 },
 ];
 
-
 let dailyItems = {};
 let calorieHistoryData = {};
 let weightHistoryData = [];
 let calorieHistoryChart = null;
 let weightHistoryChart = null;
-let nutritionChart = null; // New chart instance
+let nutritionChart = null; 
 let healthDataSummary = "No data available yet.";
 let chatHistory = [];
 let unlockedAchievements = [];
@@ -77,8 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
     quickRepliesContainer = document.getElementById('quick-replies-container');
     calorieHistoryChartEl = document.getElementById('calorieHistoryChart');
     weightHistoryChartEl = document.getElementById('weightHistoryChart');
-    nutritionChartEl = document.getElementById('nutrition-chart'); // New
-    nutritionNoticeEl = document.getElementById('nutrition-notice'); // New
+    nutritionChartEl = document.getElementById('nutrition-chart');
+    nutritionNoticeEl = document.getElementById('nutrition-notice');
+    nutritionChartPlaceholder = document.getElementById('nutrition-chart-placeholder'); // New
     
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
@@ -124,7 +122,7 @@ function handleThemeToggle() {
     }
     if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
     if (weightHistoryChart) updateChartAppearance(weightHistoryChart);
-    if (nutritionChart) updateChartAppearance(nutritionChart); // Update nutrition chart theme
+    if (nutritionChart) updateChartAppearance(nutritionChart); 
 }
 
 // --- APP INITIALIZATION ---
@@ -296,7 +294,6 @@ function renderWeightChart(data) {
     updateChartAppearance(weightHistoryChart);
 }
 
-// MODIFIED: updateChartAppearance to handle the donut chart's default state
 function updateChartAppearance(chart) {
     if (!chart) return;
     const isDarkMode = document.documentElement.classList.contains('dark');
@@ -319,22 +316,14 @@ function updateChartAppearance(chart) {
 
     chart.data.datasets.forEach(dataset => {
         if (chart.config.type === 'doughnut') {
-            const totalMacros = dataset.data.reduce((a, b) => a + b, 0);
-            // Check for the default empty state (placeholder data is [1])
-            const isEmpty = dataset.data.length === 1 && totalMacros === 1 && chart.data.labels[0] === '';
-
-            if (isEmpty) {
-                 dataset.backgroundColor = [isDarkMode ? '#4A5568' : '#D2E3C8']; // Grey default color
-            } else {
-                 dataset.backgroundColor = isDarkMode 
-                    ? ['#e879f9', '#38bdf8', '#fbbf24'] // Pink, Blue, Amber for dark
-                    : ['#c026d3', '#0284c7', '#d97706']; // Fuchsia, Sky, Amber for light
-            }
+            dataset.backgroundColor = isDarkMode 
+                ? ['#e879f9', '#38bdf8', '#fbbf24'] 
+                : ['#c026d3', '#0284c7', '#d97706'];
             dataset.borderColor = isDarkMode ? '#2C3333' : '#FBF9F6';
         }
         else if (dataset.type === 'line') {
             dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316';
-        } else { // This covers 'bar' charts
+        } else { 
             dataset.borderColor = primaryColor;
             dataset.backgroundColor = primaryColor;
         }
@@ -560,7 +549,7 @@ async function handleChatSend() {
 function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
-    let totalMacros = { protein: 0, carbs: 0, fats: 0 }; // Initialize macros
+    let totalMacros = { protein: 0, carbs: 0, fats: 0 }; 
 
     const items = Object.values(dailyItems);
     emptyLogMessage.classList.toggle('hidden', items.length > 0);
@@ -579,7 +568,6 @@ function renderLog() {
         `;
         dailyLog.appendChild(listItem);
         total += (item.calories || 0) * (item.quantity || 1);
-        // Aggregate macros
         totalMacros.protein += (item.protein || 0) * (item.quantity || 1);
         totalMacros.carbs += (item.carbs || 0) * (item.quantity || 1);
         totalMacros.fats += (item.fats || 0) * (item.quantity || 1);
@@ -588,53 +576,67 @@ function renderLog() {
     const percentage = userProfile.calorieTarget > 0 ? Math.min((total / userProfile.calorieTarget) * 100, 100) : 0;
     calorieProgressCircle.style.strokeDasharray = `${percentage}, 100`;
 
-    // Render nutrition chart and notice
     renderNutritionChart(totalMacros);
     updateNutritionNotice(totalMacros);
 }
 
-// MODIFIED: renderNutritionChart to handle a default empty state
+// --- NEW NUTRITION CHART & NOTICE FUNCTIONS ---
+// MODIFIED: This function now handles showing/hiding the placeholder
 function renderNutritionChart(macros) {
-    const ctx = nutritionChartEl.getContext('2d');
     const totalMacros = macros.protein + macros.carbs + macros.fats;
 
-    // Use placeholder data if no macros are logged, otherwise use real data
-    const chartData = totalMacros > 0 ? [macros.protein, macros.carbs, macros.fats] : [1];
-    const chartLabels = totalMacros > 0 ? ['Protein', 'Carbs', 'Fats'] : [''];
+    if (totalMacros > 0) {
+        // Data exists, so show the chart canvas and hide the placeholder
+        nutritionChartPlaceholder.classList.add('hidden');
+        nutritionChartEl.classList.remove('hidden');
 
-    if (nutritionChart) {
-        nutritionChart.data.datasets[0].data = chartData;
-        nutritionChart.data.labels = chartLabels;
-        nutritionChart.options.plugins.legend.display = totalMacros > 0;
-        nutritionChart.update();
-    } else {
-        nutritionChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    data: chartData,
-                    borderWidth: 2,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: totalMacros > 0, // Only show legend if there's data
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 10,
-                            font: { size: 10 }
+        const ctx = nutritionChartEl.getContext('2d');
+        const chartData = [macros.protein, macros.carbs, macros.fats];
+        const chartLabels = ['Protein', 'Carbs', 'Fats'];
+
+        if (nutritionChart) {
+            nutritionChart.data.datasets[0].data = chartData;
+            nutritionChart.data.labels = chartLabels;
+            nutritionChart.options.plugins.legend.display = true;
+            nutritionChart.update();
+        } else {
+            nutritionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { size: 10 }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+        updateChartAppearance(nutritionChart);
+    } else {
+        // No data, so show the placeholder and hide the canvas
+        nutritionChartPlaceholder.classList.remove('hidden');
+        nutritionChartEl.classList.add('hidden');
+        // If the chart instance exists, destroy it so it can be recreated cleanly
+        if (nutritionChart) {
+            nutritionChart.destroy();
+            nutritionChart = null;
+        }
     }
-    updateChartAppearance(nutritionChart);
 }
 
 
@@ -643,7 +645,6 @@ function updateNutritionNotice(macros) {
     const { macroTargets } = userProfile;
     let notice = '';
 
-    // Daily check
     if (protein > 0 && protein < macroTargets.protein * 0.5) {
         notice = 'Your protein intake is a bit low today. Consider adding a protein-rich snack!';
     } else if (carbs > macroTargets.carbs * 1.2) {
@@ -652,12 +653,11 @@ function updateNutritionNotice(macros) {
         notice = 'You have exceeded your healthy fats goal for the day.';
     }
 
-    // Consistency check (simplified for this example)
     if (!notice) {
-        const macroHistory = getMacroHistory(3); // Check last 3 days
+        const macroHistory = getMacroHistory(3); 
         if (macroHistory.length >= 3) {
-            const highCarbDays = macroHistory.filter(day => (day.carbs * 4) / day.totalCalories > 0.6).length; // Carbs > 60% of calories
-            const lowProteinDays = macroHistory.filter(day => (day.protein * 4) / day.totalCalories < 0.15).length; // Protein < 15% of calories
+            const highCarbDays = macroHistory.filter(day => (day.carbs * 4) / day.totalCalories > 0.6).length; 
+            const lowProteinDays = macroHistory.filter(day => (day.protein * 4) / day.totalCalories < 0.15).length; 
             
             if (highCarbDays >= 2) {
                 notice = "Reminder: Your carb intake has been high the last few days. Ensure you're getting enough protein and fats.";
@@ -677,7 +677,7 @@ function updateNutritionNotice(macros) {
 
 function getMacroHistory(days) {
     const history = [];
-    for (let i = 1; i <= days; i++) { // Start from yesterday
+    for (let i = 1; i <= days; i++) { 
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d).split('T')[0];
