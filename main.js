@@ -1,13 +1,12 @@
 // --- 1. DECLARE ALL VARIABLES ---
-let mainContainer, searchInput, searchResults, searchLoader, dailyLog, totalCaloriesSpan,
+let mainContainer, dailyLog, totalCaloriesSpan,
     calorieTargetSpan, calorieProgressCircle, logLoader, emptyLogMessage,
-    themeToggleSwitch, historyBtns, calorieChartLoader,
-    calorieChartContainer, aiResponseEl, getAiTipBtn, aiLoader, weightInput,
+    themeToggleSwitch, historyBtns,
+    aiResponseEl, getAiTipBtn, aiLoader, weightInput,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
-    weightChartContainer, welcomeMessage, manualNameInput,
-    manualCaloriesInput, addManualBtn, aiChatModal, openChatBtn, closeChatBtn,
-    chatContainer, chatInput, chatSendBtn, achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
-    achievementToast, toastIcon, toastName;
+    achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
+    achievementToast, toastIcon, toastName,
+    chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl;
 
 const userProfile = {
     name: 'User',
@@ -15,10 +14,23 @@ const userProfile = {
     goalWeight: 76,
     calorieTarget: 1850
 };
+
+// Gamification Achievements
+const achievements = [
+    { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
+    { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
+    { id: 'streak7', name: '7-Day Streak', icon: '🏆', condition: () => calculateStreak() >= 7 },
+    { id: 'lose1kg', name: 'Lost 1kg', icon: '💪', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 1 },
+    { id: 'goal', name: 'Goal Getter', icon: '🥇', condition: () => weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight },
+    { id: 'weightLog1', name: 'First Weigh-in', icon: '⚖️', condition: () => weightHistoryData.length >= 1 },
+    { id: 'perfectDay', name: 'Perfect Day', icon: '🎯', condition: () => { const today = getTodaysDateEDT(); const log = localStorage.getItem(`log_${today}`); if (!log) return false; const items = JSON.parse(log); const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0); return total > 0 && total <= userProfile.calorieTarget; }},
+    { id: 'chat1', name: 'Curious Mind', icon: '💬', condition: () => chatHistory.length > 2 },
+];
+
+
 let dailyItems = {};
 let calorieHistoryData = {};
 let weightHistoryData = [];
-let searchTimeout;
 let calorieHistoryChart = null;
 let weightHistoryChart = null;
 let healthDataSummary = "No data available yet.";
@@ -29,14 +41,10 @@ let unlockedAchievements = [];
 document.addEventListener('DOMContentLoaded', () => {
     // Assign all UI elements
     mainContainer = document.getElementById('main-container');
-    searchInput = document.getElementById('searchInput');
-    searchResults = document.getElementById('searchResults');
-    searchLoader = document.getElementById('search-loader');
     dailyLog = document.getElementById('dailyLog');
     totalCaloriesSpan = document.getElementById('totalCalories');
     calorieTargetSpan = document.getElementById('calorieTarget');
     calorieProgressCircle = document.getElementById('calorie-progress-circle');
-    logLoader = document.getElementById('log-loader');
     emptyLogMessage = document.getElementById('empty-log-message');
     themeToggleSwitch = document.getElementById('theme-toggle-switch');
     historyBtns = document.querySelectorAll('.history-btn');
@@ -47,25 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
     logWeightBtn = document.getElementById('log-weight-btn');
     currentWeightDisplay = document.getElementById('current-weight-display');
     goalWeightDisplay = document.getElementById('goal-weight-display');
-    weightChartContainer = document.getElementById('weightHistoryChart'); 
-    calorieChartContainer = document.getElementById('calorieHistoryChart');
     achievementsGrid = document.getElementById('achievements-grid');
     streakDays = document.getElementById('streak-days');
     streakCounter = document.getElementById('streak-counter');
     tabButtons = document.querySelectorAll('.tab-btn');
     tabContents = document.querySelectorAll('.tab-content');
-    manualNameInput = document.getElementById('manualNameInput');
-    manualCaloriesInput = document.getElementById('manualCaloriesInput');
-    addManualBtn = document.getElementById('add-manual-btn');
-    aiChatModal = document.getElementById('ai-chat-modal');
-    openChatBtn = document.getElementById('open-chat-btn');
-    closeChatBtn = document.getElementById('close-chat-btn');
     chatContainer = document.getElementById('chat-container');
     chatInput = document.getElementById('chat-input');
     chatSendBtn = document.getElementById('chat-send-btn');
     achievementToast = document.getElementById('achievement-toast');
     toastIcon = document.getElementById('toast-icon');
     toastName = document.getElementById('toast-name');
+    quickRepliesContainer = document.getElementById('quick-replies-container');
+    calorieHistoryChartEl = document.getElementById('calorieHistoryChart');
+    weightHistoryChartEl = document.getElementById('weightHistoryChart');
     
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
@@ -73,13 +76,28 @@ document.addEventListener('DOMContentLoaded', () => {
     historyBtns.forEach(btn => btn.addEventListener('click', () => handleHistoryButtonClick(btn)));
     logWeightBtn.addEventListener('click', handleLogWeight);
     getAiTipBtn.addEventListener('click', getAICoachTip);
-    searchInput.addEventListener('input', handleSearchInput);
-    dailyLog.addEventListener('click', handleLogInteraction);
-    addManualBtn.addEventListener('click', handleManualAdd);
-    openChatBtn.addEventListener('click', handleOpenChat);
-    closeChatBtn.addEventListener('click', () => aiChatModal.classList.add('hidden'));
     chatSendBtn.addEventListener('click', handleChatSend);
-    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatSend(); });
+    chatInput.addEventListener('keydown', (e) => { 
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleChatSend();
+        }
+    });
+    quickRepliesContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('quick-reply-btn')) {
+            chatInput.value = e.target.textContent;
+            handleChatSend();
+        }
+    });
+    
+    // ADDED: Event listener for deleting log entries
+    dailyLog.addEventListener('click', (e) => {
+        const deleteButton = e.target.closest('.delete-btn');
+        if (deleteButton) {
+            const foodId = deleteButton.dataset.id;
+            deleteFoodFromDB(foodId);
+        }
+    });
 
     // Start the app
     initializeAppData();
@@ -103,38 +121,37 @@ function handleThemeToggle() {
 function initializeAppData() {
     mainContainer.classList.remove('hidden');
     
-    // Set initial theme state
     if (document.documentElement.classList.contains('dark')) {
         themeToggleSwitch.checked = true;
     }
 
-    // Set user profile info
     goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
     
-    const initialAiMessage = "Hello! I'm your AI nutrition coach. Ask me anything about your diet, meal ideas, or how to reach your goals. How can I help you today?";
-    chatHistory = [{ role: 'model', parts: [{ text: initialAiMessage }] }];
+    const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had 2 idlis and a coffee'), or ask for your progress.";
+    // The initial message for the UI
+    const initialAiPayload = {type: 'text', payload: {message: initialAiMessage}};
+    // The initial message for the API history
+    const initialHistoryEntry = { role: 'model', parts: [{ text: JSON.stringify(initialAiPayload)}] };
+    
+    chatHistory.push(initialHistoryEntry);
+    appendMessage(initialAiPayload, 'ai');
 
-    // Load data
     loadUnlockedAchievements();
     getTodaysLog();
     getWeightHistory();
     updateStreak();
     
-    // Initial chart rendering
     renderWeightChart(weightHistoryData);
     fetchCalorieHistory(7); 
     
-    // Set initial active tab
     handleTabSwitch(document.querySelector('.tab-btn[data-tab="today"]'));
-    checkAndUnlockAchievements(); // Initial check on load
+    checkAndUnlockAchievements();
 }
 
 // --- TAB NAVIGATION ---
 function handleTabSwitch(button) {
     const tab = button.dataset.tab;
-
-    // Handle button active states
     tabButtons.forEach(btn => {
         btn.classList.remove('active');
         btn.classList.add('text-gray-400');
@@ -146,17 +163,11 @@ function handleTabSwitch(button) {
     });
 }
 
-
 // --- LOCAL STORAGE DATA HANDLING ---
 function getTodaysDateEDT() {
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/New_York',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-    return formatter.format(now);
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+    return formatter.format(now).split('T')[0];
 }
 
 function getTodaysLog() {
@@ -180,24 +191,21 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
-    const foodId = foodItem.name.replace(/\s+/g, '-').toLowerCase();
+    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now(); // Ensure unique ID
     if (dailyItems[foodId]) {
-        dailyItems[foodId].quantity++;
+        dailyItems[foodId].quantity += foodItem.quantity;
     } else {
-        dailyItems[foodId] = { ...foodItem, quantity: 1, id: foodId };
+        dailyItems[foodId] = { ...foodItem, id: foodId };
     }
     saveData();
     renderLog();
     checkAndUnlockAchievements();
 }
 
-function updateFoodQuantityInDB(foodId, newQuantity) {
+// NEW: Function to delete a food item
+function deleteFoodFromDB(foodId) {
     if (dailyItems[foodId]) {
-        if (newQuantity > 0) {
-            dailyItems[foodId].quantity = newQuantity;
-        } else {
-            delete dailyItems[foodId];
-        }
+        delete dailyItems[foodId];
         saveData();
         renderLog();
     }
@@ -243,14 +251,12 @@ function fetchCalorieHistory(days) {
     renderCalorieHistoryChart(data);
 }
 
-
 function renderCalorieHistoryChart(data) {
     const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
     const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = sortedDates.map(date => data[date]);
-    const ctx = document.getElementById('calorieHistoryChart').getContext('2d');
-
-    const average = values.reduce((a, b) => a + b, 0) / values.length;
+    const ctx = calorieHistoryChartEl.getContext('2d');
+    const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
     const averageData = Array(values.length).fill(average);
 
     if (calorieHistoryChart) {
@@ -261,25 +267,7 @@ function renderCalorieHistoryChart(data) {
     } else {
         calorieHistoryChart = new Chart(ctx, {
             type: 'bar',
-            data: { 
-                labels, 
-                datasets: [
-                    {
-                        label: 'Calories',
-                        data: values,
-                    },
-                    {
-                        label: 'Average',
-                        data: averageData,
-                        type: 'line',
-                        borderColor: '#F97316', // Orange
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0,
-                        borderDash: [5, 5]
-                    }
-                ] 
-            },
+            data: { labels, datasets: [ { label: 'Calories', data: values }, { label: 'Average', data: averageData, type: 'line', pointRadius: 0, borderWidth: 2, borderDash: [5, 5] } ] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
     }
@@ -289,7 +277,7 @@ function renderCalorieHistoryChart(data) {
 function renderWeightChart(data) {
     const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const values = data.map(d => d.weight);
-    const ctx = document.getElementById('weightHistoryChart').getContext('2d');
+    const ctx = weightHistoryChartEl.getContext('2d');
 
     if (weightHistoryChart) {
         weightHistoryChart.data.labels = labels;
@@ -299,10 +287,7 @@ function renderWeightChart(data) {
         weightHistoryChart = new Chart(ctx, {
             type: 'line',
             data: { labels, datasets: [{ label: 'Weight (kg)', data: values, tension: 0.4 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } },
-                plugins: { legend: { display: false } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } }, plugins: { legend: { display: false } } }
         });
     }
     updateChartAppearance(weightHistoryChart);
@@ -321,21 +306,18 @@ function updateChartAppearance(chart) {
     chart.options.scales.x.ticks.color = ticksColor;
     chart.options.scales.y.ticks.color = ticksColor;
     
-    // Bar and Line datasets
     chart.data.datasets.forEach(dataset => {
         if (dataset.type === 'line') {
-            dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316'; // Amber color for average line
+            dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316';
         } else {
             dataset.borderColor = primaryColor;
-            dataset.backgroundColor = primaryColor; // Solid bar color
+            dataset.backgroundColor = primaryColor;
         }
     });
 
     if (chart.config.type === 'line') {
-        chart.data.datasets[0].backgroundColor = primaryBgColor; // Area fill for weight chart
+        chart.data.datasets[0].backgroundColor = primaryBgColor;
     }
-
-
     chart.update();
 }
 
@@ -351,43 +333,11 @@ function handleLogWeight() {
     if (weight) logWeightToDB(weight);
 }
 
-
-function handleSearchInput() {
-    clearTimeout(searchTimeout);
-    const query = searchInput.value.trim();
-    if (query.length < 3) {
-        searchResults.innerHTML = '';
-        return;
-    }
-    searchTimeout = setTimeout(() => searchFoodAPI(query), 500);
-}
-
 // --- GAMIFICATION ---
-const achievements = [
-    // ... (Full list of 50+ achievements from the plan)
-    { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
-    { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
-    { id: 'streak7', name: '7-Day Streak', icon: '🏆', condition: () => calculateStreak() >= 7 },
-    { id: 'streak14', name: '14-Day Streak', icon: '🏅', condition: () => calculateStreak() >= 14 },
-    { id: 'streak30', name: '30-Day Streak', icon: '🎉', condition: () => calculateStreak() >= 30 },
-    { id: 'week1', name: 'First Week', icon: '📅', condition: () => Object.keys(localStorage).filter(k => k.startsWith('log_')).length >= 7 },
-    { id: 'lose1kg', name: 'Lost 1kg', icon: '💪', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 1 },
-    { id: 'lose5kg', name: 'Lost 5kg', icon: '🎉', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 5 },
-    { id: 'halfway', name: 'Halfway There', icon: '🏁', condition: () => weightHistoryData.length > 0 && (userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight) >= (userProfile.startWeight - userProfile.goalWeight) / 2 },
-    { id: 'goal', name: 'Goal Getter', icon: '🥇', condition: () => weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight },
-    { id: 'weightLog1', name: 'First Weigh-in', icon: '⚖️', condition: () => weightHistoryData.length >= 1 },
-    { id: 'weightLog5', name: 'Consistent Weigher', icon: '📈', condition: () => weightHistoryData.length >= 5 },
-    { id: 'perfectDay', name: 'Perfect Day', icon: '🎯', condition: () => { const today = getTodaysDateEDT(); const log = localStorage.getItem(`log_${today}`); if (!log) return false; const items = JSON.parse(log); const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0); return total > 0 && total <= userProfile.calorieTarget; }},
-    { id: 'explorer', name: 'Explorer', icon: '🗺️', condition: () => getTotalUniqueFoods() >= 10 },
-    { id: 'foodCritic', name: 'Food Critic', icon: '🧐', condition: () => getTotalUniqueFoods() >= 50 },
-    { id: 'librarian', name: 'Librarian', icon: '📚', condition: () => getTotalUniqueFoods() >= 100 },
-    { id: 'manualMaster', name: 'Manual Master', icon: '✍️', condition: () => localStorage.getItem('manualEntryCount') >= 1 },
-    { id: 'chat1', name: 'Curious Mind', icon: '💬', condition: () => chatHistory.length > 2 },
-];
-
 function loadUnlockedAchievements() {
     const saved = localStorage.getItem('unlockedAchievements');
     unlockedAchievements = saved ? JSON.parse(saved) : [];
+    renderAchievements();
 }
 
 function saveUnlockedAchievements() {
@@ -410,46 +360,24 @@ function checkAndUnlockAchievements() {
 
 function renderAchievements() {
     achievementsGrid.innerHTML = '';
-    const unlocked = getUnlockedAchievements();
-
-    if (unlocked.length === 0) {
-        achievementsGrid.innerHTML = `<p class="col-span-3 text-center text-gray-500">Log your progress to unlock achievements!</p>`;
-        return;
-    }
-
-    unlocked.forEach(ach => {
+    achievements.forEach(ach => {
+        const isUnlocked = unlockedAchievements.includes(ach.id);
         const div = document.createElement('div');
-        div.className = `achievement-badge unlocked p-4 bg-brand-bg dark:bg-dark-bg rounded-2xl flex flex-col items-center justify-center gap-2`;
+        div.className = `achievement-badge ${isUnlocked ? 'unlocked' : ''} p-4 bg-brand-bg dark:bg-dark-bg rounded-2xl flex flex-col items-center justify-center gap-2`;
         div.innerHTML = `
             <span class="text-4xl">${ach.icon}</span>
-            <span class="text-xs font-semibold">${ach.name}</span>
+            <span class="text-xs font-semibold text-center">${ach.name}</span>
         `;
         achievementsGrid.appendChild(div);
     });
 }
-
-function getUnlockedAchievements() {
-    return achievements.filter(ach => unlockedAchievements.includes(ach.id));
-}
-
-function getTotalUniqueFoods() {
-    const allLogs = Object.keys(localStorage).filter(k => k.startsWith('log_'));
-    const uniqueFoods = new Set();
-    allLogs.forEach(key => {
-        const log = JSON.parse(localStorage.getItem(key));
-        Object.keys(log).forEach(foodId => uniqueFoods.add(foodId));
-    });
-    return uniqueFoods.size;
-}
-
 
 function calculateStreak() {
     let streak = 0;
     for (let i = 0; i < 365; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d);
-        
+        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d).split('T')[0];
         const log = localStorage.getItem(`log_${dateString}`);
         if (log && Object.keys(JSON.parse(log)).length > 0) {
             streak++;
@@ -463,7 +391,7 @@ function calculateStreak() {
 function updateStreak() {
     const streak = calculateStreak();
     if (streak > 0) {
-        streakDays.textContent = `${streak} Day Streak!`;
+        streakDays.textContent = `${streak}-Day Streak`;
         streakCounter.classList.remove('hidden');
     } else {
         streakCounter.classList.add('hidden');
@@ -488,19 +416,28 @@ async function getAICoachTip() {
 
     await fetchHealthDataSummary();
 
-    const prompt = `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip (2-4 sentences) about a low-calorie Indian meal, a protein shake, or a meal with their preferred proteins (egg, tofu, shrimp). Address the user by name.`;
+    const prompt = `You are a friendly AI nutrition coach. The user's health data is: ${healthDataSummary}. Provide a short, motivational tip.`;
 
     try {
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'ai', query: { contents: [{ parts: [{ text: prompt }] }] } })
+            body: JSON.stringify({ type: 'ai', query: prompt })
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
-        aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
+        const text = result.candidates[0].content.parts[0].text;
+        
+        // Check if the response is JSON and parse it
+        try {
+            const parsed = JSON.parse(text);
+            aiResponseEl.textContent = parsed.payload.message;
+        } catch(e) {
+            aiResponseEl.textContent = text;
+        }
+
     } catch (error) {
-        aiResponseEl.textContent = "Could not get tip. Check API keys in Vercel.";
+        aiResponseEl.textContent = "Could not get tip. Please try again.";
     } finally {
         aiResponseEl.classList.remove('hidden');
         aiLoader.classList.add('hidden');
@@ -508,47 +445,101 @@ async function getAICoachTip() {
     }
 }
 
-async function searchFoodAPI(query) {
-    searchLoader.classList.remove('hidden');
+async function handleChatSend() {
+    const userMessage = chatInput.value.trim();
+    if (!userMessage) return;
+
+    appendMessage({ type: 'text', payload: { message: userMessage }}, 'user');
+    chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+    chatInput.value = '';
+    chatSendBtn.disabled = true;
+    quickRepliesContainer.innerHTML = '';
+
+    const typingId = `typing-${Date.now()}`;
+    appendMessage({ type: 'typing_indicator', id: typingId }, 'ai');
+
+    await fetchHealthDataSummary();
+    
+    // *** BUG FIX START ***
+    // The system instruction is moved into the conversation history itself.
+    // This is a more reliable way to give instructions to the model.
+    const instructionText = `
+        You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
+        The user's health data summary is: ${healthDataSummary}.
+        You MUST respond with only a single, raw JSON object, with no other text, comments, or markdown formatting around it.
+
+        Available types:
+        1. "text": For a standard chat response. payload: { "message": "Your text here" }.
+        2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories. Respond with a food_log. payload: { "foodName": "User's description (e.g., Two rotis and dal)", "calories": ESTIMATED_CALORIES, "quantity": 1 }.
+        3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No"] }.
+
+        Analyze the user's message ("${userMessage}"), determine the intent (log food or just chat), and generate the correct JSON response.
+    `;
+
+    // Construct a new history for the API call with the instructions at the beginning.
+    const apiHistory = [
+        { role: 'user', parts: [{ text: instructionText }] },
+        { role: 'model', parts: [{ text: JSON.stringify({ type: 'text', payload: { message: 'Understood. I will respond in the required JSON format.' }}) }] },
+        ...chatHistory
+    ];
+
+    const payload = { contents: apiHistory };
+    // We no longer use the systemInstruction parameter
+    // *** BUG FIX END ***
+
     try {
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'food', query: query })
+            body: JSON.stringify({ type: 'ai', query: payload })
         });
-        if (!response.ok) throw new Error('API request failed');
-        const data = await response.json();
-        displaySearchResults(data.hints);
+        
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("API Error Response:", errorBody);
+            throw new Error(`API Error: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        const aiResponseText = result.candidates[0].content.parts[0].text;
+        
+        document.getElementById(typingId)?.closest('.message-bubble-wrapper')?.remove();
+
+        try {
+            const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("No JSON found in response");
+            
+            const aiResponseJSON = JSON.parse(jsonMatch[0]);
+            chatHistory.push({ role: 'model', parts: [{ text: jsonMatch[0] }] });
+            
+            if (aiResponseJSON.type === 'food_log' && aiResponseJSON.payload) {
+                addFoodToDB(aiResponseJSON.payload);
+                appendMessage({ type: 'food_log_card', payload: aiResponseJSON.payload }, 'ai');
+            } else {
+                 appendMessage(aiResponseJSON, 'ai');
+            }
+           
+            if(aiResponseJSON.type === 'confirmation' && aiResponseJSON.payload.quick_replies) {
+                renderQuickReplies(aiResponseJSON.payload.quick_replies);
+            }
+        } catch (e) {
+             chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+             appendMessage({ type: 'text', payload: { message: aiResponseText } }, 'ai');
+        }
+
     } catch (error) {
-        searchResults.innerHTML = `<div class="p-2 text-center text-sm">Could not fetch results.</div>`;
+        console.error("Gemini API error:", error);
+        document.getElementById(typingId)?.closest('.message-bubble-wrapper')?.remove();
+        appendMessage({ type: 'text', payload: { message: "Sorry, I couldn't connect. Please try again." } }, 'ai');
     } finally {
-        searchLoader.classList.add('hidden');
+        chatSendBtn.disabled = false;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        checkAndUnlockAchievements();
     }
 }
 
 // --- UI RENDERING ---
-function displaySearchResults(foods) {
-    searchResults.innerHTML = '';
-    if (!foods || foods.length === 0) {
-        searchResults.innerHTML = `<div class="p-2 text-center text-sm">No results found.</div>`;
-        return;
-    }
-    foods.slice(0, 5).forEach(item => {
-        const food = item.food;
-        const foodName = food.label;
-        const calories = food.nutrients.ENERC_KCAL ? Math.round(food.nutrients.ENERC_KCAL) : 0;
-        const resultDiv = document.createElement('div');
-        resultDiv.className = 'p-3 hover:bg-brand-secondary dark:hover:bg-dark-secondary cursor-pointer flex justify-between items-center border-t border-brand-subtle dark:border-dark-subtle';
-        resultDiv.innerHTML = `<div><p class="font-semibold">${foodName}</p><p class="text-sm">${calories} calories</p></div><button class="text-brand-primary dark:text-dark-primary font-bold text-2xl">+</button>`;
-        resultDiv.addEventListener('click', () => {
-            addFoodToDB({ name: foodName, calories: calories });
-            searchInput.value = '';
-            searchResults.innerHTML = '';
-        });
-        searchResults.appendChild(resultDiv);
-    });
-}
-
+// UPDATED: renderLog function to include a delete button
 function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
@@ -559,145 +550,24 @@ function renderLog() {
         const listItem = document.createElement('li');
         listItem.className = 'p-3 bg-brand-bg dark:bg-dark-bg rounded-xl flex justify-between items-center';
         listItem.innerHTML = `
-            <div>
-                <p class="font-semibold">${item.name}</p>
-                <p class="text-sm">${item.calories} kcal</p>
+            <div class="flex-grow">
+                <p class="font-semibold">${item.foodName || item.name}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">${item.calories} kcal &times; ${item.quantity}</p>
             </div>
-            <div class="flex items-center gap-2">
-                <button data-id="${item.id}" data-action="decrease" class="quantity-btn text-lg font-bold w-7 h-7 rounded-full bg-brand-secondary dark:bg-dark-secondary">-</button>
-                <span class="font-bold text-lg w-8 text-center">${item.quantity}</span>
-                <button data-id="${item.id}" data-action="increase" class="quantity-btn text-lg font-bold w-7 h-7 rounded-full bg-brand-secondary dark:bg-dark-secondary">+</button>
-            </div>
+            <button data-id="${item.id}" class="delete-btn text-red-500 hover:text-red-700 p-2 rounded-full transition-colors">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path></svg>
+            </button>
         `;
         dailyLog.appendChild(listItem);
         total += item.calories * item.quantity;
     });
     totalCaloriesSpan.textContent = Math.round(total);
-    
     const percentage = userProfile.calorieTarget > 0 ? Math.min((total / userProfile.calorieTarget) * 100, 100) : 0;
     calorieProgressCircle.style.strokeDasharray = `${percentage}, 100`;
 }
 
-function handleLogInteraction(e) {
-    const target = e.target.closest('.quantity-btn');
-    if (!target) return;
-    
-    const foodId = target.dataset.id;
-    const action = target.dataset.action;
-    const item = dailyItems[foodId];
 
-    if (!item) return;
-
-    if (action === 'increase') {
-        updateFoodQuantityInDB(foodId, item.quantity + 1);
-    } else if (action === 'decrease') {
-        updateFoodQuantityInDB(foodId, item.quantity - 1);
-    }
-}
-
-function handleManualAdd() {
-    const name = manualNameInput.value || 'Manual Entry';
-    const calories = parseInt(manualCaloriesInput.value);
-
-    if (!calories || calories <= 0) {
-        alert("Please enter a valid calorie amount.");
-        return;
-    }
-    
-    let manualCount = parseInt(localStorage.getItem('manualEntryCount')) || 0;
-    localStorage.setItem('manualEntryCount', ++manualCount);
-
-    addFoodToDB({ name, calories });
-    manualNameInput.value = '';
-    manualCaloriesInput.value = '';
-}
-
-async function handleChatSend() {
-    const userMessage = chatInput.value.trim();
-    if (!userMessage) return;
-
-    appendMessage(userMessage, 'user');
-    chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
-    chatInput.value = '';
-    chatSendBtn.disabled = true;
-
-    const typingId = `typing-${Date.now()}`;
-    appendMessage(`<div class="typing-loader" id="${typingId}"><span></span><span></span><span></span></div>`, 'ai');
-
-    await fetchHealthDataSummary();
-
-    const systemInstruction = {
-        parts: [{ text: `You are a friendly AI nutrition coach specializing in healthy Indian cuisine. The user is predominantly vegetarian but also eats eggs, tofu, and shrimp. Here is the user's current health data summary: ${healthDataSummary}. Keep your responses conversational and focused on their questions.` }]
-    };
-
-    try {
-        const payload = {
-            contents: chatHistory,
-            systemInstruction: systemInstruction
-        };
-        
-        const response = await fetch('/api/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'ai', query: payload })
-        });
-        
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-        
-        const result = await response.json();
-        const aiResponse = result.candidates[0].content.parts[0].text;
-        
-        document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
-        appendMessage(aiResponse, 'ai');
-        chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
-        checkAndUnlockAchievements();
-
-    } catch (error) {
-        console.error("Gemini API error:", error);
-        document.getElementById(typingId).closest('.message-bubble-wrapper').remove();
-        appendMessage("Sorry, I'm having trouble connecting right now. Please try again.", 'ai');
-    } finally {
-        chatSendBtn.disabled = false;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-}
-
-function handleOpenChat() {
-    chatContainer.innerHTML = ''; 
-    chatHistory.forEach(msg => {
-        const sender = msg.role === 'user' ? 'user' : 'ai';
-        const message = msg.parts[0].text;
-        appendMessage(message, sender);
-    });
-    aiChatModal.classList.remove('hidden');
-}
-
-
-function appendMessage(message, sender) {
-    const messageWrapper = document.createElement('div');
-    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3';
-    
-    if (sender === 'user') {
-        messageWrapper.classList.add('justify-end');
-        messageWrapper.innerHTML = `
-            <div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-xs md:max-w-md message-bubble">
-                <p>${message}</p>
-            </div>
-            <div class="bg-brand-subtle dark:bg-dark-subtle text-brand-text dark:text-dark-text p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">U</div>
-        `;
-    } else { // AI
-        messageWrapper.classList.add('justify-start');
-        messageWrapper.innerHTML = `
-            <div class="bg-brand-primary text-white p-2 rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">A</div>
-            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-xs md:max-w-md message-bubble">
-                ${message}
-            </div>
-        `;
-    }
-    chatContainer.appendChild(messageWrapper);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
+// --- HELPER & UI FUNCTIONS (RESTORED) ---
 async function fetchHealthDataSummary() {
     let calorieHistoryText = "Recent calorie history:\n";
     for (let i = 0; i < 7; i++) {
@@ -730,5 +600,61 @@ async function fetchHealthDataSummary() {
         ${calorieHistoryText}
         ${weightHistoryText}
     `;
+}
+
+function renderQuickReplies(replies) {
+    quickRepliesContainer.innerHTML = '';
+    replies.forEach(reply => {
+        const button = document.createElement('button');
+        button.className = 'quick-reply-btn';
+        button.textContent = reply;
+        quickRepliesContainer.appendChild(button);
+    });
+}
+
+function appendMessage(data, sender) {
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3 w-full';
+    
+    if (sender === 'user') {
+        messageWrapper.classList.add('justify-end');
+        messageWrapper.innerHTML = `
+            <div class="bg-brand-primary text-white p-4 rounded-2xl rounded-br-none max-w-xs md:max-w-md message-bubble">
+                <p>${data.payload.message}</p>
+            </div>
+        `;
+    } else { // AI
+        messageWrapper.classList.add('justify-start');
+        let contentHTML = '';
+
+        switch (data.type) {
+            case 'text':
+                contentHTML = `<p>${data.payload.message}</p>`;
+                break;
+            case 'typing_indicator':
+                contentHTML = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
+                break;
+            case 'food_log_card':
+                contentHTML = `
+                    <div class="p-3 bg-brand-secondary/50 dark:bg-dark-secondary/50 rounded-lg border border-brand-primary dark:border-dark-primary">
+                        <p class="font-semibold">✅ Logged!</p>
+                        <p class="text-sm">${data.payload.foodName} - ${data.payload.calories} kcal</p>
+                    </div>`;
+                break;
+             case 'confirmation':
+                contentHTML = `<p>${data.payload.message}</p>`;
+                break;
+            default:
+                 contentHTML = `<p>Received an unknown message type.</p>`
+        }
+        
+        messageWrapper.innerHTML = `
+            <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-xs md:max-w-md message-bubble">
+                ${contentHTML}
+            </div>
+        `;
+    }
+    chatContainer.appendChild(messageWrapper);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
