@@ -93,16 +93,34 @@
                             <span id="streak-days"></span>
                         </div>
                     </div>
-                    <div class="relative w-48 h-48 mx-auto">
-                        <svg class="w-full h-full" viewBox="0 0 36 36">
-                            <path class="text-brand-secondary dark:text-dark-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
-                            <path id="calorie-progress-circle" class="text-brand-primary dark:text-dark-primary transition-all duration-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round"></path>
-                        </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <span id="totalCalories" class="text-4xl font-bold">0</span>
-                            <span class="text-sm">/</span>
-                            <span id="calorieTarget" class="text-sm">... Kcal</span>
+                    <!-- Flex container for charts -->
+                    <div class="flex items-center justify-around gap-4 mb-4">
+                        <!-- Calorie Circle -->
+                        <div class="relative w-40 h-40 text-center">
+                            <h3 class="font-semibold mb-1 text-sm">Calories</h3>
+                            <svg class="w-full h-full" viewBox="0 0 36 36">
+                                <path class="text-brand-secondary dark:text-dark-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+                                <path id="calorie-progress-circle" class="text-brand-primary dark:text-dark-primary transition-all duration-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round"></path>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span id="totalCalories" class="text-3xl font-bold">0</span>
+                                <span id="calorieTarget" class="text-xs">/ ... Kcal</span>
+                            </div>
                         </div>
+                        <!-- Nutrition Donut Chart -->
+                        <div class="relative w-40 h-40 text-center">
+                            <h3 class="font-semibold mb-1 text-sm">Macros (g)</h3>
+                            <!-- NEW: Placeholder SVG for the empty state -->
+                            <svg id="nutrition-chart-placeholder" class="w-full h-full" viewBox="0 0 36 36">
+                                <path class="text-brand-secondary dark:text-dark-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+                            </svg>
+                            <!-- MODIFIED: Canvas is now hidden by default -->
+                            <canvas id="nutrition-chart" class="hidden"></canvas>
+                        </div>
+                    </div>
+                    <!-- Nutrition Notice -->
+                    <div id="nutrition-notice" class="text-center text-sm p-3 bg-brand-bg dark:bg-dark-bg rounded-lg mt-4 hidden">
+                        <!-- Notice will be inserted here by JS -->
                     </div>
                 </div>
 
