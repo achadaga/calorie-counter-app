@@ -7,7 +7,7 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
     chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl,
-    nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder; // New elements
+    nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder, macroHistoryChartEl; // New elements
 
 const userProfile = {
     name: 'User',
@@ -38,6 +38,7 @@ let weightHistoryData = [];
 let calorieHistoryChart = null;
 let weightHistoryChart = null;
 let nutritionChart = null; 
+let macroHistoryChart = null;
 let healthDataSummary = "No data available yet.";
 let chatHistory = [];
 let unlockedAchievements = [];
@@ -76,7 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     weightHistoryChartEl = document.getElementById('weightHistoryChart');
     nutritionChartEl = document.getElementById('nutrition-chart');
     nutritionNoticeEl = document.getElementById('nutrition-notice');
-    nutritionChartPlaceholder = document.getElementById('nutrition-chart-placeholder'); // New
+    nutritionChartPlaceholder = document.getElementById('nutrition-chart-placeholder');
+    macroHistoryChartEl = document.getElementById('macroHistoryChart'); // New
     
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
@@ -123,6 +125,7 @@ function handleThemeToggle() {
     if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
     if (weightHistoryChart) updateChartAppearance(weightHistoryChart);
     if (nutritionChart) updateChartAppearance(nutritionChart); 
+    if (macroHistoryChart) updateChartAppearance(macroHistoryChart); // New
 }
 
 // --- APP INITIALIZATION ---
@@ -150,6 +153,7 @@ function initializeAppData() {
     
     renderWeightChart(weightHistoryData);
     fetchCalorieHistory(7); 
+    fetchMacroHistory(7); // New
     
     handleTabSwitch(document.querySelector('.tab-btn[data-tab="today"]'));
     checkAndUnlockAchievements();
@@ -257,6 +261,26 @@ function fetchCalorieHistory(days) {
     renderCalorieHistoryChart(data);
 }
 
+// NEW: Fetch Macro History
+function fetchMacroHistory(days) {
+    const data = {};
+    for (let i = 0; i < days; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+        const savedLog = localStorage.getItem(`log_${dateString}`);
+        const items = savedLog ? JSON.parse(savedLog) : {};
+        const dailyMacros = { protein: 0, carbs: 0, fats: 0 };
+        Object.values(items).forEach(item => {
+            dailyMacros.protein += (item.protein || 0) * (item.quantity || 1);
+            dailyMacros.carbs += (item.carbs || 0) * (item.quantity || 1);
+            dailyMacros.fats += (item.fats || 0) * (item.quantity || 1);
+        });
+        data[dateString] = dailyMacros;
+    }
+    renderMacroHistoryChart(data);
+}
+
 function renderCalorieHistoryChart(data) {
     const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
     const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
@@ -279,6 +303,53 @@ function renderCalorieHistoryChart(data) {
     }
     updateChartAppearance(calorieHistoryChart);
 }
+
+// NEW: Render Macro History Chart
+function renderMacroHistoryChart(data) {
+    const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
+    const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    
+    const proteinData = sortedDates.map(date => data[date].protein);
+    const carbsData = sortedDates.map(date => data[date].carbs);
+    const fatsData = sortedDates.map(date => data[date].fats);
+
+    const ctx = macroHistoryChartEl.getContext('2d');
+
+    if (macroHistoryChart) {
+        macroHistoryChart.data.labels = labels;
+        macroHistoryChart.data.datasets[0].data = proteinData;
+        macroHistoryChart.data.datasets[1].data = carbsData;
+        macroHistoryChart.data.datasets[2].data = fatsData;
+        macroHistoryChart.update();
+    } else {
+        macroHistoryChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Protein', data: proteinData },
+                    { label: 'Carbs', data: carbsData },
+                    { label: 'Fats', data: fatsData },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { 
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true } 
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+    }
+    updateChartAppearance(macroHistoryChart);
+}
+
 
 function renderWeightChart(data) {
     const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
@@ -319,32 +390,40 @@ function updateChartAppearance(chart) {
         chart.options.plugins.legend.labels.color = legendColor;
     }
 
-    chart.data.datasets.forEach(dataset => {
-        if (chart.config.type === 'doughnut') {
-            dataset.backgroundColor = isDarkMode 
-                ? ['#e879f9', '#38bdf8', '#fbbf24'] 
-                : ['#c026d3', '#0284c7', '#d97706'];
-            dataset.borderColor = isDarkMode ? '#2C3333' : '#FBF9F6';
-        }
-        else if (dataset.type === 'line') {
-            dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316';
-        } else { 
-            dataset.borderColor = primaryColor;
-            dataset.backgroundColor = primaryColor;
-        }
-    });
+    // Assign colors based on chart type or specific dataset properties
+    const macroColors = isDarkMode 
+        ? ['#e879f9', '#38bdf8', '#fbbf24'] 
+        : ['#c026d3', '#0284c7', '#d97706'];
 
-    if (chart.config.type === 'line') {
-        chart.data.datasets[0].backgroundColor = primaryBgColor;
+    if (chart === macroHistoryChart) {
+        chart.data.datasets.forEach((dataset, index) => {
+            dataset.backgroundColor = macroColors[index];
+        });
+    } else {
+        chart.data.datasets.forEach(dataset => {
+            if (chart.config.type === 'doughnut') {
+                dataset.backgroundColor = macroColors;
+                dataset.borderColor = isDarkMode ? '#2C3333' : '#FBF9F6';
+            }
+            else if (dataset.type === 'line') {
+                dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316';
+                 if (chart === weightHistoryChart) dataset.backgroundColor = primaryBgColor;
+            } else { 
+                dataset.borderColor = primaryColor;
+                dataset.backgroundColor = primaryColor;
+            }
+        });
     }
     chart.update();
 }
 
 function handleHistoryButtonClick(btn) {
     const days = parseInt(btn.dataset.days);
-    fetchCalorieHistory(days);
     historyBtns.forEach(b => b.classList.remove('bg-brand-secondary', 'dark:bg-dark-secondary'));
     btn.classList.add('bg-brand-secondary', 'dark:bg-dark-secondary');
+    
+    fetchCalorieHistory(days);
+    fetchMacroHistory(days);
 }
 
 function handleLogWeight() {
@@ -535,7 +614,6 @@ async function handleChatSend() {
             }
         } catch (e) {
              chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
-             // MODIFIED: If an error occurs, check if it was a food_log. If so, do nothing. Otherwise, show a generic error.
              if (!aiResponseText.includes('"type":"food_log"')) {
                 appendMessage({ type: 'text', payload: { message: "Sorry, I had trouble understanding that. Could you try again?" } }, 'ai');
              }
@@ -596,19 +674,43 @@ function renderNutritionChart(macros) {
         nutritionChartEl.classList.remove('hidden');
 
         const ctx = nutritionChartEl.getContext('2d');
-        const chartData = [macros.protein, macros.carbs, macros.fats];
-        const chartLabels = ['Protein', 'Carbs', 'Fats'];
+        const chartData = [Math.round(macros.protein), Math.round(macros.carbs), Math.round(macros.fats)];
+        const originalLabels = ['Protein', 'Carbs', 'Fats'];
+        const targets = [userProfile.macroTargets.protein, userProfile.macroTargets.carbs, userProfile.macroTargets.fats];
+
+        const generateLabelsConfig = function(chart) {
+            const data = chart.data;
+            if (data.labels.length && data.datasets.length) {
+                const { labels: { pointStyle } } = chart.legend.options;
+                return data.labels.map((label, i) => {
+                    const meta = chart.getDatasetMeta(0);
+                    const style = meta.controller.getStyle(i);
+                    const current = data.datasets[0].data[i];
+                    const target = targets[i];
+                    
+                    return {
+                        text: `${label}: ${current}g / ${target}g`,
+                        fillStyle: style.backgroundColor,
+                        strokeStyle: style.borderColor,
+                        lineWidth: style.borderWidth,
+                        hidden: !chart.getDataVisibility(i),
+                        index: i,
+                        pointStyle: pointStyle
+                    };
+                });
+            }
+            return [];
+        };
 
         if (nutritionChart) {
             nutritionChart.data.datasets[0].data = chartData;
-            nutritionChart.data.labels = chartLabels;
-            nutritionChart.options.plugins.legend.display = true;
+            nutritionChart.options.plugins.legend.labels.generateLabels = generateLabelsConfig;
             nutritionChart.update();
         } else {
             nutritionChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: chartLabels,
+                    labels: originalLabels,
                     datasets: [{
                         data: chartData,
                         borderWidth: 2,
@@ -624,7 +726,8 @@ function renderNutritionChart(macros) {
                             labels: {
                                 boxWidth: 12,
                                 padding: 10,
-                                font: { size: 10 }
+                                font: { size: 10 },
+                                generateLabels: generateLabelsConfig
                             }
                         }
                     }
