@@ -89,6 +89,15 @@ document.addEventListener('DOMContentLoaded', () => {
             handleChatSend();
         }
     });
+    
+    // ADDED: Event listener for deleting log entries
+    dailyLog.addEventListener('click', (e) => {
+        const deleteButton = e.target.closest('.delete-btn');
+        if (deleteButton) {
+            const foodId = deleteButton.dataset.id;
+            deleteFoodFromDB(foodId);
+        }
+    });
 
     // Start the app
     initializeAppData();
@@ -182,7 +191,7 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
-    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase();
+    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now(); // Ensure unique ID
     if (dailyItems[foodId]) {
         dailyItems[foodId].quantity += foodItem.quantity;
     } else {
@@ -191,6 +200,15 @@ function addFoodToDB(foodItem) {
     saveData();
     renderLog();
     checkAndUnlockAchievements();
+}
+
+// NEW: Function to delete a food item
+function deleteFoodFromDB(foodId) {
+    if (dailyItems[foodId]) {
+        delete dailyItems[foodId];
+        saveData();
+        renderLog();
+    }
 }
 
 function logWeightToDB(weight) {
@@ -521,6 +539,7 @@ async function handleChatSend() {
 }
 
 // --- UI RENDERING ---
+// UPDATED: renderLog function to include a delete button
 function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
@@ -531,11 +550,13 @@ function renderLog() {
         const listItem = document.createElement('li');
         listItem.className = 'p-3 bg-brand-bg dark:bg-dark-bg rounded-xl flex justify-between items-center';
         listItem.innerHTML = `
-            <div>
+            <div class="flex-grow">
                 <p class="font-semibold">${item.foodName || item.name}</p>
-                <p class="text-sm">${item.calories} kcal</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">${item.calories} kcal &times; ${item.quantity}</p>
             </div>
-            <div class="font-bold text-lg">x${item.quantity}</div>
+            <button data-id="${item.id}" class="delete-btn text-red-500 hover:text-red-700 p-2 rounded-full transition-colors">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path></svg>
+            </button>
         `;
         dailyLog.appendChild(listItem);
         total += item.calories * item.quantity;
@@ -544,6 +565,7 @@ function renderLog() {
     const percentage = userProfile.calorieTarget > 0 ? Math.min((total / userProfile.calorieTarget) * 100, 100) : 0;
     calorieProgressCircle.style.strokeDasharray = `${percentage}, 100`;
 }
+
 
 // --- HELPER & UI FUNCTIONS (RESTORED) ---
 async function fetchHealthDataSummary() {
