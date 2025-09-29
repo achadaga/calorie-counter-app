@@ -6,13 +6,20 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     logWeightBtn, currentWeightDisplay, goalWeightDisplay,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
-    chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl;
+    chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl,
+    nutritionChartEl, nutritionNoticeEl; // New elements
 
 const userProfile = {
     name: 'User',
     startWeight: 87.5,
     goalWeight: 76,
-    calorieTarget: 1850
+    calorieTarget: 1850,
+    // NEW: Recommended daily macro targets in grams
+    macroTargets: {
+        protein: 139, // 30% of 1850 kcal
+        carbs: 185,   // 40% of 1850 kcal
+        fats: 62      // 30% of 1850 kcal
+    }
 };
 
 // Gamification Achievements
@@ -33,6 +40,7 @@ let calorieHistoryData = {};
 let weightHistoryData = [];
 let calorieHistoryChart = null;
 let weightHistoryChart = null;
+let nutritionChart = null; // New chart instance
 let healthDataSummary = "No data available yet.";
 let chatHistory = [];
 let unlockedAchievements = [];
@@ -69,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     quickRepliesContainer = document.getElementById('quick-replies-container');
     calorieHistoryChartEl = document.getElementById('calorieHistoryChart');
     weightHistoryChartEl = document.getElementById('weightHistoryChart');
+    nutritionChartEl = document.getElementById('nutrition-chart'); // New
+    nutritionNoticeEl = document.getElementById('nutrition-notice'); // New
     
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
@@ -90,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // ADDED: Event listener for deleting log entries
     dailyLog.addEventListener('click', (e) => {
         const deleteButton = e.target.closest('.delete-btn');
         if (deleteButton) {
@@ -115,6 +124,7 @@ function handleThemeToggle() {
     }
     if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
     if (weightHistoryChart) updateChartAppearance(weightHistoryChart);
+    if (nutritionChart) updateChartAppearance(nutritionChart); // Update nutrition chart theme
 }
 
 // --- APP INITIALIZATION ---
@@ -129,9 +139,7 @@ function initializeAppData() {
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
     
     const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had 2 idlis and a coffee'), or ask for your progress.";
-    // The initial message for the UI
     const initialAiPayload = {type: 'text', payload: {message: initialAiMessage}};
-    // The initial message for the API history
     const initialHistoryEntry = { role: 'model', parts: [{ text: JSON.stringify(initialAiPayload)}] };
     
     chatHistory.push(initialHistoryEntry);
@@ -191,18 +199,13 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
-    const foodId = foodItem.foodName.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now(); // Ensure unique ID
-    if (dailyItems[foodId]) {
-        dailyItems[foodId].quantity += foodItem.quantity;
-    } else {
-        dailyItems[foodId] = { ...foodItem, id: foodId };
-    }
+    const foodId = (foodItem.foodName.replace(/\s+/g, '-').toLowerCase() || 'entry') + '-' + Date.now();
+    dailyItems[foodId] = { ...foodItem, id: foodId };
     saveData();
     renderLog();
     checkAndUnlockAchievements();
 }
 
-// NEW: Function to delete a food item
 function deleteFoodFromDB(foodId) {
     if (dailyItems[foodId]) {
         delete dailyItems[foodId];
@@ -293,6 +296,7 @@ function renderWeightChart(data) {
     updateChartAppearance(weightHistoryChart);
 }
 
+// MODIFIED: updateChartAppearance to handle the donut chart's default state
 function updateChartAppearance(chart) {
     if (!chart) return;
     const isDarkMode = document.documentElement.classList.contains('dark');
@@ -300,16 +304,37 @@ function updateChartAppearance(chart) {
     const ticksColor = isDarkMode ? '#EAEAEA' : '#4F6F52';
     const primaryColor = isDarkMode ? '#A8D08D' : '#86A789';
     const primaryBgColor = isDarkMode ? 'rgba(168, 208, 141, 0.1)' : 'rgba(134, 167, 137, 0.1)';
+    const legendColor = isDarkMode ? '#EAEAEA' : '#4F6F52';
 
-    chart.options.scales.x.grid.color = gridColor;
-    chart.options.scales.y.grid.color = gridColor;
-    chart.options.scales.x.ticks.color = ticksColor;
-    chart.options.scales.y.ticks.color = ticksColor;
+    if (chart.options.scales) {
+        chart.options.scales.x.grid.color = gridColor;
+        chart.options.scales.y.grid.color = gridColor;
+        chart.options.scales.x.ticks.color = ticksColor;
+        chart.options.scales.y.ticks.color = ticksColor;
+    }
     
+    if (chart.options.plugins.legend) {
+        chart.options.plugins.legend.labels.color = legendColor;
+    }
+
     chart.data.datasets.forEach(dataset => {
-        if (dataset.type === 'line') {
+        if (chart.config.type === 'doughnut') {
+            const totalMacros = dataset.data.reduce((a, b) => a + b, 0);
+            // Check for the default empty state (placeholder data is [1])
+            const isEmpty = dataset.data.length === 1 && totalMacros === 1 && chart.data.labels[0] === '';
+
+            if (isEmpty) {
+                 dataset.backgroundColor = [isDarkMode ? '#4A5568' : '#D2E3C8']; // Grey default color
+            } else {
+                 dataset.backgroundColor = isDarkMode 
+                    ? ['#e879f9', '#38bdf8', '#fbbf24'] // Pink, Blue, Amber for dark
+                    : ['#c026d3', '#0284c7', '#d97706']; // Fuchsia, Sky, Amber for light
+            }
+            dataset.borderColor = isDarkMode ? '#2C3333' : '#FBF9F6';
+        }
+        else if (dataset.type === 'line') {
             dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316';
-        } else {
+        } else { // This covers 'bar' charts
             dataset.borderColor = primaryColor;
             dataset.backgroundColor = primaryColor;
         }
@@ -428,7 +453,6 @@ async function getAICoachTip() {
         const result = await response.json();
         const text = result.candidates[0].content.parts[0].text;
         
-        // Check if the response is JSON and parse it
         try {
             const parsed = JSON.parse(text);
             aiResponseEl.textContent = parsed.payload.message;
@@ -460,9 +484,6 @@ async function handleChatSend() {
 
     await fetchHealthDataSummary();
     
-    // *** BUG FIX START ***
-    // The system instruction is moved into the conversation history itself.
-    // This is a more reliable way to give instructions to the model.
     const instructionText = `
         You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
         The user's health data summary is: ${healthDataSummary}.
@@ -470,22 +491,19 @@ async function handleChatSend() {
 
         Available types:
         1. "text": For a standard chat response. payload: { "message": "Your text here" }.
-        2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories. Respond with a food_log. payload: { "foodName": "User's description (e.g., Two rotis and dal)", "calories": ESTIMATED_CALORIES, "quantity": 1 }.
+        2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories AND macronutrients. Respond with a food_log. payload: { "foodName": "User's description", "calories": ESTIMATED_CALORIES, "quantity": 1, "protein": ESTIMATED_PROTEIN_GRAMS, "carbs": ESTIMATED_CARBS_GRAMS, "fats": ESTIMATED_FATS_GRAMS }.
         3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No"] }.
 
-        Analyze the user's message ("${userMessage}"), determine the intent (log food or just chat), and generate the correct JSON response.
+        Analyze the user's message ("${userMessage}"), determine the intent, and generate the correct JSON response.
     `;
 
-    // Construct a new history for the API call with the instructions at the beginning.
     const apiHistory = [
         { role: 'user', parts: [{ text: instructionText }] },
-        { role: 'model', parts: [{ text: JSON.stringify({ type: 'text', payload: { message: 'Understood. I will respond in the required JSON format.' }}) }] },
+        { role: 'model', parts: [{ text: JSON.stringify({ type: 'text', payload: { message: 'Understood. I will respond in the required JSON format with macronutrient estimates.' }}) }] },
         ...chatHistory
     ];
 
     const payload = { contents: apiHistory };
-    // We no longer use the systemInstruction parameter
-    // *** BUG FIX END ***
 
     try {
         const response = await fetch('/api/search', {
@@ -539,10 +557,11 @@ async function handleChatSend() {
 }
 
 // --- UI RENDERING ---
-// UPDATED: renderLog function to include a delete button
 function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
+    let totalMacros = { protein: 0, carbs: 0, fats: 0 }; // Initialize macros
+
     const items = Object.values(dailyItems);
     emptyLogMessage.classList.toggle('hidden', items.length > 0);
     
@@ -559,13 +578,126 @@ function renderLog() {
             </button>
         `;
         dailyLog.appendChild(listItem);
-        total += item.calories * item.quantity;
+        total += (item.calories || 0) * (item.quantity || 1);
+        // Aggregate macros
+        totalMacros.protein += (item.protein || 0) * (item.quantity || 1);
+        totalMacros.carbs += (item.carbs || 0) * (item.quantity || 1);
+        totalMacros.fats += (item.fats || 0) * (item.quantity || 1);
     });
     totalCaloriesSpan.textContent = Math.round(total);
     const percentage = userProfile.calorieTarget > 0 ? Math.min((total / userProfile.calorieTarget) * 100, 100) : 0;
     calorieProgressCircle.style.strokeDasharray = `${percentage}, 100`;
+
+    // Render nutrition chart and notice
+    renderNutritionChart(totalMacros);
+    updateNutritionNotice(totalMacros);
 }
 
+// MODIFIED: renderNutritionChart to handle a default empty state
+function renderNutritionChart(macros) {
+    const ctx = nutritionChartEl.getContext('2d');
+    const totalMacros = macros.protein + macros.carbs + macros.fats;
+
+    // Use placeholder data if no macros are logged, otherwise use real data
+    const chartData = totalMacros > 0 ? [macros.protein, macros.carbs, macros.fats] : [1];
+    const chartLabels = totalMacros > 0 ? ['Protein', 'Carbs', 'Fats'] : [''];
+
+    if (nutritionChart) {
+        nutritionChart.data.datasets[0].data = chartData;
+        nutritionChart.data.labels = chartLabels;
+        nutritionChart.options.plugins.legend.display = totalMacros > 0;
+        nutritionChart.update();
+    } else {
+        nutritionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartData,
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: totalMacros > 0, // Only show legend if there's data
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10,
+                            font: { size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    updateChartAppearance(nutritionChart);
+}
+
+
+function updateNutritionNotice(macros) {
+    const { protein, carbs, fats } = macros;
+    const { macroTargets } = userProfile;
+    let notice = '';
+
+    // Daily check
+    if (protein > 0 && protein < macroTargets.protein * 0.5) {
+        notice = 'Your protein intake is a bit low today. Consider adding a protein-rich snack!';
+    } else if (carbs > macroTargets.carbs * 1.2) {
+        notice = 'You are over your carbohydrate goal for today. Focus on protein and fats for your next meal.';
+    } else if (fats > macroTargets.fats * 1.2) {
+        notice = 'You have exceeded your healthy fats goal for the day.';
+    }
+
+    // Consistency check (simplified for this example)
+    if (!notice) {
+        const macroHistory = getMacroHistory(3); // Check last 3 days
+        if (macroHistory.length >= 3) {
+            const highCarbDays = macroHistory.filter(day => (day.carbs * 4) / day.totalCalories > 0.6).length; // Carbs > 60% of calories
+            const lowProteinDays = macroHistory.filter(day => (day.protein * 4) / day.totalCalories < 0.15).length; // Protein < 15% of calories
+            
+            if (highCarbDays >= 2) {
+                notice = "Reminder: Your carb intake has been high the last few days. Ensure you're getting enough protein and fats.";
+            } else if (lowProteinDays >= 2) {
+                notice = "We've noticed a trend of low protein intake. Let's try to include a good protein source in every meal.";
+            }
+        }
+    }
+
+    if (notice) {
+        nutritionNoticeEl.textContent = notice;
+        nutritionNoticeEl.classList.remove('hidden');
+    } else {
+        nutritionNoticeEl.classList.add('hidden');
+    }
+}
+
+function getMacroHistory(days) {
+    const history = [];
+    for (let i = 1; i <= days; i++) { // Start from yesterday
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d).split('T')[0];
+        const log = localStorage.getItem(`log_${dateString}`);
+        if (log) {
+            const items = JSON.parse(log);
+            const dailyMacros = { protein: 0, carbs: 0, fats: 0, totalCalories: 0 };
+            Object.values(items).forEach(item => {
+                dailyMacros.protein += (item.protein || 0) * item.quantity;
+                dailyMacros.carbs += (item.carbs || 0) * item.quantity;
+                dailyMacros.fats += (item.fats || 0) * item.quantity;
+                dailyMacros.totalCalories += (item.calories || 0) * item.quantity;
+            });
+            if (dailyMacros.totalCalories > 0) {
+                 history.push(dailyMacros);
+            }
+        }
+    }
+    return history;
+}
 
 // --- HELPER & UI FUNCTIONS (RESTORED) ---
 async function fetchHealthDataSummary() {
