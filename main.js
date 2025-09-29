@@ -519,9 +519,10 @@ async function handleChatSend() {
             const aiResponseJSON = JSON.parse(jsonMatch[0]);
             chatHistory.push({ role: 'model', parts: [{ text: jsonMatch[0] }] });
             
+            // MODIFIED: This block handles the response from the AI
             if (aiResponseJSON.type === 'food_log' && aiResponseJSON.payload) {
                 addFoodToDB(aiResponseJSON.payload);
-                appendMessage({ type: 'food_log_card', payload: aiResponseJSON.payload }, 'ai');
+                // The confirmation message is no longer shown in the chat
             } else {
                  appendMessage(aiResponseJSON, 'ai');
             }
@@ -763,13 +764,8 @@ function appendMessage(data, sender) {
                 contentHTML = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
                 break;
             case 'food_log_card':
-                // MODIFIED: Simplified the confirmation message
-                contentHTML = `
-                    <div class="p-3 bg-brand-secondary/50 dark:bg-dark-secondary/50 rounded-lg border border-brand-primary dark:border-dark-primary">
-                        <p class="font-semibold">✅ Logged: ${data.payload.foodName}</p>
-                        <p class="text-sm">(${data.payload.calories} kcal). Your charts are updated.</p>
-                    </div>`;
-                break;
+                // This case is no longer used to display a message, but is kept for potential future use.
+                return; 
              case 'confirmation':
                 contentHTML = `<p>${data.payload.message}</p>`;
                 break;
