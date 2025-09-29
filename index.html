@@ -110,17 +110,14 @@
                         <!-- Nutrition Donut Chart -->
                         <div class="relative w-40 h-40 text-center">
                             <h3 class="font-semibold mb-1 text-sm">Macros (g)</h3>
-                            <!-- NEW: Placeholder SVG for the empty state -->
                             <svg id="nutrition-chart-placeholder" class="w-full h-full" viewBox="0 0 36 36">
                                 <path class="text-brand-secondary dark:text-dark-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
                             </svg>
-                            <!-- MODIFIED: Canvas is now hidden by default -->
                             <canvas id="nutrition-chart" class="hidden"></canvas>
                         </div>
                     </div>
                     <!-- Nutrition Notice -->
                     <div id="nutrition-notice" class="text-center text-sm p-3 bg-brand-bg dark:bg-dark-bg rounded-lg mt-4 hidden">
-                        <!-- Notice will be inserted here by JS -->
                     </div>
                 </div>
 
@@ -151,6 +148,15 @@
 
             <!-- DASHBOARD TAB CONTENT -->
             <div id="dashboard-tab-content" class="tab-content hidden space-y-6">
+                 <!-- Date Range Buttons -->
+                 <div class="bg-brand-surface dark:bg-dark-surface p-3 rounded-3xl shadow-lg">
+                    <div class="flex justify-center space-x-2">
+                        <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-brand-secondary dark:bg-dark-secondary">7 Days</button>
+                        <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">15 Days</button>
+                        <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">30 Days</button>
+                    </div>
+                 </div>
+
                  <!-- Weight Progress Card -->
                 <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
                     <h2 class="text-xl font-semibold mb-4">Weight Progress</h2>
@@ -172,14 +178,18 @@
                         <canvas id="weightHistoryChart"></canvas>
                     </div>
                 </div>
+                
+                <!-- NEW: Macro History Card -->
+                <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Macro History (g)</h2>
+                    <div class="chart-container">
+                        <canvas id="macroHistoryChart"></canvas>
+                    </div>
+                </div>
+
                  <!-- Calorie History Card -->
                  <div class="bg-brand-surface dark:bg-dark-surface p-6 rounded-3xl shadow-lg">
                     <h2 class="text-xl font-semibold mb-4">Calorie History</h2>
-                     <div class="flex justify-center space-x-2 mb-4">
-                        <button data-days="7" class="history-btn px-4 py-2 text-sm font-medium rounded-lg bg-brand-secondary dark:bg-dark-secondary">7 Days</button>
-                        <button data-days="15" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">15 Days</button>
-                        <button data-days="30" class="history-btn px-4 py-2 text-sm font-medium rounded-lg">30 Days</button>
-                    </div>
                     <div class="chart-container">
                         <canvas id="calorieHistoryChart"></canvas>
                     </div>
