@@ -581,12 +581,10 @@ function renderLog() {
 }
 
 // --- NEW NUTRITION CHART & NOTICE FUNCTIONS ---
-// MODIFIED: This function now handles showing/hiding the placeholder
 function renderNutritionChart(macros) {
     const totalMacros = macros.protein + macros.carbs + macros.fats;
 
     if (totalMacros > 0) {
-        // Data exists, so show the chart canvas and hide the placeholder
         nutritionChartPlaceholder.classList.add('hidden');
         nutritionChartEl.classList.remove('hidden');
 
@@ -628,10 +626,8 @@ function renderNutritionChart(macros) {
         }
         updateChartAppearance(nutritionChart);
     } else {
-        // No data, so show the placeholder and hide the canvas
         nutritionChartPlaceholder.classList.remove('hidden');
         nutritionChartEl.classList.add('hidden');
-        // If the chart instance exists, destroy it so it can be recreated cleanly
         if (nutritionChart) {
             nutritionChart.destroy();
             nutritionChart = null;
@@ -767,10 +763,11 @@ function appendMessage(data, sender) {
                 contentHTML = `<div class="typing-loader" id="${data.id}"><span></span><span></span><span></span></div>`;
                 break;
             case 'food_log_card':
+                // MODIFIED: Simplified the confirmation message
                 contentHTML = `
                     <div class="p-3 bg-brand-secondary/50 dark:bg-dark-secondary/50 rounded-lg border border-brand-primary dark:border-dark-primary">
-                        <p class="font-semibold">✅ Logged!</p>
-                        <p class="text-sm">${data.payload.foodName} - ${data.payload.calories} kcal</p>
+                        <p class="font-semibold">✅ Logged: ${data.payload.foodName}</p>
+                        <p class="text-sm">(${data.payload.calories} kcal). Your charts are updated.</p>
                     </div>`;
                 break;
              case 'confirmation':
