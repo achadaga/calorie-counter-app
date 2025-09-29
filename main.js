@@ -149,6 +149,11 @@ function initializeAppData() {
     loadUnlockedAchievements();
     getTodaysLog();
     getWeightHistory();
+    
+    // NEW: Set initial macro targets based on latest weight
+    const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length - 1].weight : userProfile.startWeight;
+    updateMacroTargets(latestWeight);
+
     updateStreak();
     
     renderWeightChart(weightHistoryData);
@@ -222,18 +227,29 @@ function deleteFoodFromDB(foodId) {
 }
 
 function logWeightToDB(weight) {
+    const newWeight = parseFloat(weight);
+    if (!newWeight) return;
+
     const today = getTodaysDateEDT();
     const todayEntryIndex = weightHistoryData.findIndex(entry => entry.date === today);
+
     if (todayEntryIndex > -1) {
-        weightHistoryData[todayEntryIndex].weight = parseFloat(weight);
+        weightHistoryData[todayEntryIndex].weight = newWeight;
     } else {
-        weightHistoryData.push({ date: today, weight: parseFloat(weight) });
+        weightHistoryData.push({ date: today, weight: newWeight });
     }
+
     weightHistoryData.sort((a, b) => new Date(a.date) - new Date(b.date));
     saveData();
+
+    // NEW: Update macro targets based on the new weight
+    updateMacroTargets(newWeight);
+
+    // Update UI
     renderWeightChart(weightHistoryData);
     updateCurrentWeightDisplay();
     checkAndUnlockAchievements();
+    renderLog(); // Re-render log to update chart legends
     weightInput.value = '';
 }
 
@@ -243,6 +259,14 @@ function updateCurrentWeightDisplay() {
     } else {
         currentWeightDisplay.textContent = `${userProfile.startWeight} kg`;
     }
+}
+
+// NEW: Function to dynamically update macro targets
+function updateMacroTargets(currentWeight) {
+    // Using 1.8g/kg for protein (weight loss), 2.4g/kg for carbs, 0.8g/kg for fats
+    userProfile.macroTargets.protein = Math.round(currentWeight * 1.8);
+    userProfile.macroTargets.carbs = Math.round(currentWeight * 2.4);
+    userProfile.macroTargets.fats = Math.round(currentWeight * 0.8);
 }
 
 // --- HISTORY & CHARTING ---
