@@ -120,9 +120,13 @@ function initializeAppData() {
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
     
     const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had 2 idlis and a coffee'), or ask for your progress.";
-    chatHistory.push({ role: 'model', parts: [{ text: JSON.stringify({type: 'text', payload: {message: initialAiMessage}})}] });
-    appendMessage({ type: 'text', payload: { message: initialAiMessage } }, 'ai');
-
+    // The initial message for the UI
+    const initialAiPayload = {type: 'text', payload: {message: initialAiMessage}};
+    // The initial message for the API history
+    const initialHistoryEntry = { role: 'model', parts: [{ text: JSON.stringify(initialAiPayload)}] };
+    
+    chatHistory.push(initialHistoryEntry);
+    appendMessage(initialAiPayload, 'ai');
 
     loadUnlockedAchievements();
     getTodaysLog();
@@ -154,7 +158,7 @@ function handleTabSwitch(button) {
 function getTodaysDateEDT() {
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-    return formatter.format(now);
+    return formatter.format(now).split('T')[0];
 }
 
 function getTodaysLog() {
@@ -404,7 +408,16 @@ async function getAICoachTip() {
         });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
-        aiResponseEl.textContent = result.candidates[0].content.parts[0].text;
+        const text = result.candidates[0].content.parts[0].text;
+        
+        // Check if the response is JSON and parse it
+        try {
+            const parsed = JSON.parse(text);
+            aiResponseEl.textContent = parsed.payload.message;
+        } catch(e) {
+            aiResponseEl.textContent = text;
+        }
+
     } catch (error) {
         aiResponseEl.textContent = "Could not get tip. Please try again.";
     } finally {
@@ -429,32 +442,45 @@ async function handleChatSend() {
 
     await fetchHealthDataSummary();
     
-    // CORRECTED: Changed system_instruction back to systemInstruction
-    const systemInstruction = {
-        parts: [{ text: `
-            You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
-            The user's health data summary is: ${healthDataSummary}.
-            You MUST respond with only a single, raw JSON object, with no other text, comments, or markdown formatting around it.
+    // *** BUG FIX START ***
+    // The system instruction is moved into the conversation history itself.
+    // This is a more reliable way to give instructions to the model.
+    const instructionText = `
+        You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
+        The user's health data summary is: ${healthDataSummary}.
+        You MUST respond with only a single, raw JSON object, with no other text, comments, or markdown formatting around it.
 
-            Available types:
-            1. "text": For a standard chat response. payload: { "message": "Your text here" }.
-            2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories. Respond with a food_log. payload: { "foodName": "User's description (e.g., Two rotis and dal)", "calories": ESTIMATED_CALORIES, "quantity": 1 }.
-            3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No"] }.
+        Available types:
+        1. "text": For a standard chat response. payload: { "message": "Your text here" }.
+        2. "food_log": When the user logs food. Analyze their message (e.g., "I ate two rotis and dal"). Estimate the total calories. Respond with a food_log. payload: { "foodName": "User's description (e.g., Two rotis and dal)", "calories": ESTIMATED_CALORIES, "quantity": 1 }.
+        3. "confirmation": To ask a clarifying question. payload: { "message": "Your question?", "quick_replies": ["Yes", "No"] }.
 
-            Analyze the user's message ("${userMessage}"), determine the intent (log food or just chat), and generate the correct JSON response.
-        `}]
-    };
+        Analyze the user's message ("${userMessage}"), determine the intent (log food or just chat), and generate the correct JSON response.
+    `;
+
+    // Construct a new history for the API call with the instructions at the beginning.
+    const apiHistory = [
+        { role: 'user', parts: [{ text: instructionText }] },
+        { role: 'model', parts: [{ text: JSON.stringify({ type: 'text', payload: { message: 'Understood. I will respond in the required JSON format.' }}) }] },
+        ...chatHistory
+    ];
+
+    const payload = { contents: apiHistory };
+    // We no longer use the systemInstruction parameter
+    // *** BUG FIX END ***
 
     try {
-        const payload = { contents: chatHistory, systemInstruction: systemInstruction };
-        
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'ai', query: payload })
         });
         
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("API Error Response:", errorBody);
+            throw new Error(`API Error: ${response.statusText}`);
+        }
         
         const result = await response.json();
         const aiResponseText = result.candidates[0].content.parts[0].text;
