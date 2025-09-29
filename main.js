@@ -197,6 +197,11 @@ function saveData() {
 
 // --- UI & DATA MANIPULATION ---
 function addFoodToDB(foodItem) {
+    // More robust safety check
+    if (!foodItem || typeof foodItem.foodName !== 'string' || typeof foodItem.calories !== 'number') {
+        console.error("Attempted to log invalid food item:", foodItem);
+        return; // Fail silently if data is malformed
+    }
     const foodId = (foodItem.foodName.replace(/\s+/g, '-').toLowerCase() || 'entry') + '-' + Date.now();
     dailyItems[foodId] = { ...foodItem, id: foodId };
     saveData();
@@ -514,15 +519,13 @@ async function handleChatSend() {
 
         try {
             const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("No JSON found in response");
+            if (!jsonMatch) throw new Error("Response is not JSON");
             
             const aiResponseJSON = JSON.parse(jsonMatch[0]);
             chatHistory.push({ role: 'model', parts: [{ text: jsonMatch[0] }] });
             
-            // MODIFIED: This block handles the response from the AI
             if (aiResponseJSON.type === 'food_log' && aiResponseJSON.payload) {
                 addFoodToDB(aiResponseJSON.payload);
-                // The confirmation message is no longer shown in the chat
             } else {
                  appendMessage(aiResponseJSON, 'ai');
             }
@@ -532,7 +535,10 @@ async function handleChatSend() {
             }
         } catch (e) {
              chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
-             appendMessage({ type: 'text', payload: { message: aiResponseText } }, 'ai');
+             // MODIFIED: If an error occurs, check if it was a food_log. If so, do nothing. Otherwise, show a generic error.
+             if (!aiResponseText.includes('"type":"food_log"')) {
+                appendMessage({ type: 'text', payload: { message: "Sorry, I had trouble understanding that. Could you try again?" } }, 'ai');
+             }
         }
 
     } catch (error) {
