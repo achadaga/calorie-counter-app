@@ -143,7 +143,8 @@ function initializeAppData() {
     const initialAiPayload = {type: 'text', payload: {message: initialAiMessage}};
     const initialHistoryEntry = { role: 'model', parts: [{ text: JSON.stringify(initialAiPayload)}] };
     
-    chatHistory.push(initialHistoryEntry);
+    // Do not push initial message to chatHistory to avoid consecutive model messages
+
     appendMessage(initialAiPayload, 'ai');
 
     loadUnlockedAchievements();

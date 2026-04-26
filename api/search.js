@@ -11,7 +11,7 @@ export default async function handler(request, response) {
     if (type === 'ai') {
         const { GEMINI_API_KEY } = process.env;
         // CORRECTED: Reverted to the exact API URL from the previously working version of the app.
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
         try {
             const payload = (typeof query === 'string') 
