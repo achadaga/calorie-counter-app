@@ -8,15 +8,14 @@ export default function handler(req, res) {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
-    // Helper to strip accidental quotes and whitespace from Vercel env variables
-    const cleanEnv = (val) => val ? val.replace(/^["']|["']$/g, '').trim() : undefined;
-
+    // Hardcoded public Firebase config to bypass Vercel env injection issues
+    // Note: Firebase client keys are inherently public and designed to be exposed to the browser.
     res.status(200).json({
-        apiKey: cleanEnv(process.env.FIREBASE_API_KEY) || "YOUR_FIREBASE_API_KEY",
-        authDomain: cleanEnv(process.env.FIREBASE_AUTH_DOMAIN) || "YOUR_FIREBASE_AUTH_DOMAIN",
-        projectId: cleanEnv(process.env.FIREBASE_PROJECT_ID) || "YOUR_FIREBASE_PROJECT_ID",
-        storageBucket: cleanEnv(process.env.FIREBASE_STORAGE_BUCKET) || "YOUR_FIREBASE_STORAGE_BUCKET",
-        messagingSenderId: cleanEnv(process.env.FIREBASE_MESSAGING_SENDER_ID) || "YOUR_FIREBASE_MESSAGING_SENDER_ID",
-        appId: cleanEnv(process.env.FIREBASE_APP_ID) || "YOUR_FIREBASE_APP_ID"
+        apiKey: "AIzaSyABXYCaIR2ui6CiYPwWu2iFxjHt_3Gf-l4",
+        authDomain: "calorie-counter-app-ash.firebaseapp.com",
+        projectId: "calorie-counter-app-ash",
+        storageBucket: "calorie-counter-app-ash.firebasestorage.app",
+        messagingSenderId: "984607945983",
+        appId: "1:984607945983:web:741d35a87b423248af88ca"
     });
 }
