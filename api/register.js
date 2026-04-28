@@ -1,12 +1,16 @@
 import { Resend } from 'resend';
 import { google } from 'googleapis';
 
+const cleanEnv = (val) => val ? val.replace(/^["']|["']$/g, '').trim() : undefined;
+
 const getGoogleSheetsClient = async () => {
     try {
+        const privateKeyRaw = cleanEnv(process.env.GOOGLE_PRIVATE_KEY);
+        const privateKey = privateKeyRaw ? privateKeyRaw.replace(/\\n/g, '\n') : '';
         const auth = new google.auth.GoogleAuth({
             credentials: {
-                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                private_key: process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : '',
+                client_email: cleanEnv(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL),
+                private_key: privateKey,
             },
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
@@ -23,12 +27,27 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
+    // Check for missing environment variables
+    const missingVars = [];
+    if (!cleanEnv(process.env.RESEND_API_KEY)) missingVars.push('RESEND_API_KEY');
+    if (!cleanEnv(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL)) missingVars.push('GOOGLE_SERVICE_ACCOUNT_EMAIL');
+    if (!cleanEnv(process.env.GOOGLE_PRIVATE_KEY)) missingVars.push('GOOGLE_PRIVATE_KEY');
+    if (!cleanEnv(process.env.GOOGLE_SHEET_ID)) missingVars.push('GOOGLE_SHEET_ID');
+
+    if (missingVars.length > 0) {
+        return res.status(500).json({ 
+            error: 'Server is missing environment variables: ' + missingVars.join(', '),
+            message: 'Please add these exactly as named in your Vercel Project Settings (without quotes) and trigger a REDEPLOY.'
+        });
+    }
+
     const { email, name, optIn } = req.body;
     
     try {
         // 1. Send Welcome Email via Resend
-        if (process.env.RESEND_API_KEY) {
-            const resend = new Resend(process.env.RESEND_API_KEY);
+        const resendKey = cleanEnv(process.env.RESEND_API_KEY);
+        if (resendKey) {
+            const resend = new Resend(resendKey);
             const htmlContent = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #4F6F52; background-color: #FBF9F6; padding: 30px; border-radius: 12px; border: 1px solid #E9E5E0;">
                     <div style="text-align: center; margin-bottom: 20px;">
@@ -53,11 +72,13 @@ export default async function handler(req, res) {
         }
 
         // 2. Append to Google Sheets
-        if (process.env.GOOGLE_SHEET_ID && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+        const sheetId = cleanEnv(process.env.GOOGLE_SHEET_ID);
+        const serviceEmail = cleanEnv(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+        if (sheetId && serviceEmail) {
             const sheets = await getGoogleSheetsClient();
             if (sheets) {
                 await sheets.spreadsheets.values.append({
-                    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                    spreadsheetId: sheetId,
                     range: 'Sheet1!A:D', // Assuming columns are Email, Name, OptIn, Date
                     valueInputOption: 'USER_ENTERED',
                     requestBody: {

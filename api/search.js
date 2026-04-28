@@ -9,7 +9,16 @@ export default async function handler(request, response) {
 
     // This endpoint now only handles AI requests
     if (type === 'ai') {
-        const { GEMINI_API_KEY } = process.env;
+        const cleanEnv = (val) => val ? val.replace(/^["']|["']$/g, '').trim() : undefined;
+        const GEMINI_API_KEY = cleanEnv(process.env.GEMINI_API_KEY);
+
+        if (!GEMINI_API_KEY) {
+            return response.status(500).json({ 
+                error: 'Server is missing GEMINI_API_KEY environment variable.',
+                message: 'Please add GEMINI_API_KEY exactly as named in your Vercel Project Settings (without quotes) and trigger a REDEPLOY.'
+            });
+        }
+
         // CORRECTED: Reverted to the exact API URL from the previously working version of the app.
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
