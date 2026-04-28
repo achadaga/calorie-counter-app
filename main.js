@@ -7,17 +7,18 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     achievementsGrid, streakDays, streakCounter, tabButtons, tabContents,
     achievementToast, toastIcon, toastName,
     chatContainer, chatInput, chatSendBtn, quickRepliesContainer, calorieHistoryChartEl, weightHistoryChartEl,
-    nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder, macroHistoryChartEl; // New elements
+    nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder, macroHistoryChartEl,
+    headerAuthBtn, authCloseBtn; // New elements
 
 const userProfile = {
     name: 'User',
-    startWeight: 87.5,
-    goalWeight: 76,
+    startWeight: 193,
+    goalWeight: 167,
     calorieTarget: 1850,
     macroTargets: {
-        protein: 139, 
-        carbs: 185,   
-        fats: 62      
+        protein: 139,
+        carbs: 185,
+        fats: 62
     }
 };
 
@@ -25,10 +26,10 @@ const achievements = [
     { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
     { id: 'streak3', name: '3-Day Streak', icon: '🔥', condition: () => calculateStreak() >= 3 },
     { id: 'streak7', name: '7-Day Streak', icon: '🏆', condition: () => calculateStreak() >= 7 },
-    { id: 'lose1kg', name: 'Lost 1kg', icon: '💪', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 1 },
+    { id: 'lose2lb', name: 'Lost 2lb', icon: '💪', condition: () => weightHistoryData.length > 0 && userProfile.startWeight - weightHistoryData[weightHistoryData.length - 1].weight >= 2 },
     { id: 'goal', name: 'Goal Getter', icon: '🥇', condition: () => weightHistoryData.length > 0 && weightHistoryData[weightHistoryData.length - 1].weight <= userProfile.goalWeight },
     { id: 'weightLog1', name: 'First Weigh-in', icon: '⚖️', condition: () => weightHistoryData.length >= 1 },
-    { id: 'perfectDay', name: 'Perfect Day', icon: '🎯', condition: () => { const today = getTodaysDateEDT(); const log = localStorage.getItem(`log_${today}`); if (!log) return false; const items = JSON.parse(log); const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0); return total > 0 && total <= userProfile.calorieTarget; }},
+    { id: 'perfectDay', name: 'Perfect Day', icon: '🎯', condition: () => { const today = getTodaysDateEDT(); const log = localStorage.getItem(`log_${today}`); if (!log) return false; const items = JSON.parse(log); const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0); return total > 0 && total <= userProfile.calorieTarget; } },
     { id: 'chat1', name: 'Curious Mind', icon: '💬', condition: () => chatHistory.length > 2 },
 ];
 
@@ -37,7 +38,7 @@ let calorieHistoryData = {};
 let weightHistoryData = [];
 let calorieHistoryChart = null;
 let weightHistoryChart = null;
-let nutritionChart = null; 
+let nutritionChart = null;
 let macroHistoryChart = null;
 let healthDataSummary = "No data available yet.";
 let chatHistory = [];
@@ -79,7 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
     nutritionNoticeEl = document.getElementById('nutrition-notice');
     nutritionChartPlaceholder = document.getElementById('nutrition-chart-placeholder');
     macroHistoryChartEl = document.getElementById('macroHistoryChart'); // New
-    
+    headerAuthBtn = document.getElementById('header-auth-btn');
+    authCloseBtn = document.getElementById('auth-close-btn');
+
     // Set up event listeners
     themeToggleSwitch.addEventListener('change', handleThemeToggle);
     tabButtons.forEach(button => button.addEventListener('click', () => handleTabSwitch(button)));
@@ -87,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logWeightBtn.addEventListener('click', handleLogWeight);
     getAiTipBtn.addEventListener('click', getAICoachTip);
     chatSendBtn.addEventListener('click', handleChatSend);
-    chatInput.addEventListener('keydown', (e) => { 
+    chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             handleChatSend();
@@ -99,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleChatSend();
         }
     });
-    
+
     dailyLog.addEventListener('click', (e) => {
         const deleteButton = e.target.closest('.delete-btn');
         if (deleteButton) {
@@ -108,8 +111,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Start the app
-    initializeAppData();
+    headerAuthBtn.addEventListener('click', () => {
+        if (currentUser) {
+            auth.signOut();
+        } else {
+            const authOverlay = document.getElementById('auth-overlay');
+            authOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                authOverlay.classList.remove('opacity-0');
+                authOverlay.style.opacity = '1';
+            }, 10);
+            authCloseBtn.classList.remove('hidden');
+        }
+    });
+
+    authCloseBtn.addEventListener('click', () => {
+        const authOverlay = document.getElementById('auth-overlay');
+        authOverlay.classList.add('opacity-0');
+        authOverlay.style.opacity = '0';
+        setTimeout(() => {
+            authOverlay.classList.add('hidden');
+        }, 500);
+    });
+
+    // Initialize Auth and then App
+    initAuthAndApp();
 });
 
 
@@ -124,25 +150,25 @@ function handleThemeToggle() {
     }
     if (calorieHistoryChart) updateChartAppearance(calorieHistoryChart);
     if (weightHistoryChart) updateChartAppearance(weightHistoryChart);
-    if (nutritionChart) updateChartAppearance(nutritionChart); 
+    if (nutritionChart) updateChartAppearance(nutritionChart);
     if (macroHistoryChart) updateChartAppearance(macroHistoryChart); // New
 }
 
 // --- APP INITIALIZATION ---
 function initializeAppData() {
     mainContainer.classList.remove('hidden');
-    
+
     if (document.documentElement.classList.contains('dark')) {
         themeToggleSwitch.checked = true;
     }
 
-    goalWeightDisplay.textContent = `${userProfile.goalWeight} kg`;
+    goalWeightDisplay.textContent = `${userProfile.goalWeight} lb`;
     calorieTargetSpan.textContent = `/ ${userProfile.calorieTarget} Kcal`;
-    
-    const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had 2 idlis and a coffee'), or ask for your progress.";
-    const initialAiPayload = {type: 'text', payload: {message: initialAiMessage}};
-    const initialHistoryEntry = { role: 'model', parts: [{ text: JSON.stringify(initialAiPayload)}] };
-    
+
+    const initialAiMessage = "Hello! I'm your AI health assistant. Tell me what you ate (e.g., 'I had a cheese burger and fries'), or ask for your progress.";
+    const initialAiPayload = { type: 'text', payload: { message: initialAiMessage } };
+    const initialHistoryEntry = { role: 'model', parts: [{ text: JSON.stringify(initialAiPayload) }] };
+
     // Do not push initial message to chatHistory to avoid consecutive model messages
 
     appendMessage(initialAiPayload, 'ai');
@@ -150,17 +176,17 @@ function initializeAppData() {
     loadUnlockedAchievements();
     getTodaysLog();
     getWeightHistory();
-    
+
     // NEW: Set initial macro targets based on latest weight
     const latestWeight = weightHistoryData.length > 0 ? weightHistoryData[weightHistoryData.length - 1].weight : userProfile.startWeight;
     updateMacroTargets(latestWeight);
 
     updateStreak();
-    
+
     renderWeightChart(weightHistoryData);
-    fetchCalorieHistory(7); 
+    fetchCalorieHistory(7);
     fetchMacroHistory(7); // New
-    
+
     handleTabSwitch(document.querySelector('.tab-btn[data-tab="today"]'));
     checkAndUnlockAchievements();
 }
@@ -255,19 +281,19 @@ function logWeightToDB(weight) {
 }
 
 function updateCurrentWeightDisplay() {
-     if (weightHistoryData.length > 0) {
-        currentWeightDisplay.textContent = `${weightHistoryData[weightHistoryData.length - 1].weight} kg`;
+    if (weightHistoryData.length > 0) {
+        currentWeightDisplay.textContent = `${weightHistoryData[weightHistoryData.length - 1].weight} lb`;
     } else {
-        currentWeightDisplay.textContent = `${userProfile.startWeight} kg`;
+        currentWeightDisplay.textContent = `${userProfile.startWeight} lb`;
     }
 }
 
 // NEW: Function to dynamically update macro targets
 function updateMacroTargets(currentWeight) {
-    // Using 1.8g/kg for protein (weight loss), 2.4g/kg for carbs, 0.8g/kg for fats
-    userProfile.macroTargets.protein = Math.round(currentWeight * 1.8);
-    userProfile.macroTargets.carbs = Math.round(currentWeight * 2.4);
-    userProfile.macroTargets.fats = Math.round(currentWeight * 0.8);
+    // Using 0.8g/lb for protein (weight loss), 1.1g/lb for carbs, 0.36g/lb for fats
+    userProfile.macroTargets.protein = Math.round(currentWeight * 0.8);
+    userProfile.macroTargets.carbs = Math.round(currentWeight * 1.1);
+    userProfile.macroTargets.fats = Math.round(currentWeight * 0.36);
 }
 
 // --- HISTORY & CHARTING ---
@@ -282,7 +308,7 @@ function fetchCalorieHistory(days) {
         const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
         data[dateString] = total;
     }
-    calorieHistoryData = data; 
+    calorieHistoryData = data;
     renderCalorieHistoryChart(data);
 }
 
@@ -322,7 +348,7 @@ function renderCalorieHistoryChart(data) {
     } else {
         calorieHistoryChart = new Chart(ctx, {
             type: 'bar',
-            data: { labels, datasets: [ { label: 'Calories', data: values }, { label: 'Average', data: averageData, type: 'line', pointRadius: 0, borderWidth: 2, borderDash: [5, 5] } ] },
+            data: { labels, datasets: [{ label: 'Calories', data: values }, { label: 'Average', data: averageData, type: 'line', pointRadius: 0, borderWidth: 2, borderDash: [5, 5] }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
     }
@@ -333,7 +359,7 @@ function renderCalorieHistoryChart(data) {
 function renderMacroHistoryChart(data) {
     const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
     const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    
+
     const proteinData = sortedDates.map(date => data[date].protein);
     const carbsData = sortedDates.map(date => data[date].carbs);
     const fatsData = sortedDates.map(date => data[date].fats);
@@ -360,9 +386,9 @@ function renderMacroHistoryChart(data) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { 
+                scales: {
                     x: { stacked: true },
-                    y: { stacked: true, beginAtZero: true } 
+                    y: { stacked: true, beginAtZero: true }
                 },
                 plugins: {
                     legend: {
@@ -388,7 +414,7 @@ function renderWeightChart(data) {
     } else {
         weightHistoryChart = new Chart(ctx, {
             type: 'line',
-            data: { labels, datasets: [{ label: 'Weight (kg)', data: values, tension: 0.4 }] },
+            data: { labels, datasets: [{ label: 'Weight (lb)', data: values, tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } }, plugins: { legend: { display: false } } }
         });
     }
@@ -405,19 +431,23 @@ function updateChartAppearance(chart) {
     const legendColor = isDarkMode ? '#EAEAEA' : '#4F6F52';
 
     if (chart.options.scales) {
-        chart.options.scales.x.grid.color = gridColor;
-        chart.options.scales.y.grid.color = gridColor;
-        chart.options.scales.x.ticks.color = ticksColor;
-        chart.options.scales.y.ticks.color = ticksColor;
+        if (chart.options.scales.x) {
+            if (chart.options.scales.x.grid) chart.options.scales.x.grid.color = gridColor;
+            if (chart.options.scales.x.ticks) chart.options.scales.x.ticks.color = ticksColor;
+        }
+        if (chart.options.scales.y) {
+            if (chart.options.scales.y.grid) chart.options.scales.y.grid.color = gridColor;
+            if (chart.options.scales.y.ticks) chart.options.scales.y.ticks.color = ticksColor;
+        }
     }
-    
+
     if (chart.options.plugins.legend) {
         chart.options.plugins.legend.labels.color = legendColor;
     }
 
     // Assign colors based on chart type or specific dataset properties
-    const macroColors = isDarkMode 
-        ? ['#e879f9', '#38bdf8', '#fbbf24'] 
+    const macroColors = isDarkMode
+        ? ['#e879f9', '#38bdf8', '#fbbf24']
         : ['#c026d3', '#0284c7', '#d97706'];
 
     if (chart === macroHistoryChart) {
@@ -432,8 +462,8 @@ function updateChartAppearance(chart) {
             }
             else if (dataset.type === 'line') {
                 dataset.borderColor = isDarkMode ? '#F59E0B' : '#F97316';
-                 if (chart === weightHistoryChart) dataset.backgroundColor = primaryBgColor;
-            } else { 
+                if (chart === weightHistoryChart) dataset.backgroundColor = primaryBgColor;
+            } else {
                 dataset.borderColor = primaryColor;
                 dataset.backgroundColor = primaryColor;
             }
@@ -446,7 +476,7 @@ function handleHistoryButtonClick(btn) {
     const days = parseInt(btn.dataset.days);
     historyBtns.forEach(b => b.classList.remove('bg-brand-secondary', 'dark:bg-dark-secondary'));
     btn.classList.add('bg-brand-secondary', 'dark:bg-dark-secondary');
-    
+
     fetchCalorieHistory(days);
     fetchMacroHistory(days);
 }
@@ -477,7 +507,7 @@ function checkAndUnlockAchievements() {
             }
         }
     });
-    renderAchievements(); 
+    renderAchievements();
     updateStreak();
 }
 
@@ -505,7 +535,7 @@ function calculateStreak() {
         if (log && Object.keys(JSON.parse(log)).length > 0) {
             streak++;
         } else {
-            if (i > 0) break; 
+            if (i > 0) break;
         }
     }
     return streak;
@@ -550,11 +580,11 @@ async function getAICoachTip() {
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const result = await response.json();
         const text = result.candidates[0].content.parts[0].text;
-        
+
         try {
             const parsed = JSON.parse(text);
             aiResponseEl.textContent = parsed.payload.message;
-        } catch(e) {
+        } catch (e) {
             aiResponseEl.textContent = text;
         }
 
@@ -571,7 +601,7 @@ async function handleChatSend() {
     const userMessage = chatInput.value.trim();
     if (!userMessage) return;
 
-    appendMessage({ type: 'text', payload: { message: userMessage }}, 'user');
+    appendMessage({ type: 'text', payload: { message: userMessage } }, 'user');
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
     chatInput.value = '';
     chatSendBtn.disabled = true;
@@ -581,7 +611,7 @@ async function handleChatSend() {
     appendMessage({ type: 'typing_indicator', id: typingId }, 'ai');
 
     await fetchHealthDataSummary();
-    
+
     const instructionText = `
         You are a "Smart AI Health Assistant". Your primary role is to help a user track their health and diet through conversation.
         The user's health data summary is: ${healthDataSummary}.
@@ -597,7 +627,7 @@ async function handleChatSend() {
 
     const apiHistory = [
         { role: 'user', parts: [{ text: instructionText }] },
-        { role: 'model', parts: [{ text: JSON.stringify({ type: 'text', payload: { message: 'Understood. I will respond in the required JSON format with macronutrient estimates.' }}) }] },
+        { role: 'model', parts: [{ text: JSON.stringify({ type: 'text', payload: { message: 'Understood. I will respond in the required JSON format with macronutrient estimates.' } }) }] },
         ...chatHistory
     ];
 
@@ -609,39 +639,39 @@ async function handleChatSend() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'ai', query: payload })
         });
-        
+
         if (!response.ok) {
             const errorBody = await response.text();
             console.error("API Error Response:", errorBody);
             throw new Error(`API Error: ${response.statusText}`);
         }
-        
+
         const result = await response.json();
         const aiResponseText = result.candidates[0].content.parts[0].text;
-        
+
         document.getElementById(typingId)?.closest('.message-bubble-wrapper')?.remove();
 
         try {
             const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error("Response is not JSON");
-            
+
             const aiResponseJSON = JSON.parse(jsonMatch[0]);
             chatHistory.push({ role: 'model', parts: [{ text: jsonMatch[0] }] });
-            
+
             if (aiResponseJSON.type === 'food_log' && aiResponseJSON.payload) {
                 addFoodToDB(aiResponseJSON.payload);
             } else {
-                 appendMessage(aiResponseJSON, 'ai');
+                appendMessage(aiResponseJSON, 'ai');
             }
-           
-            if(aiResponseJSON.type === 'confirmation' && aiResponseJSON.payload.quick_replies) {
+
+            if (aiResponseJSON.type === 'confirmation' && aiResponseJSON.payload.quick_replies) {
                 renderQuickReplies(aiResponseJSON.payload.quick_replies);
             }
         } catch (e) {
-             chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
-             if (!aiResponseText.includes('"type":"food_log"')) {
+            chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+            if (!aiResponseText.includes('"type":"food_log"')) {
                 appendMessage({ type: 'text', payload: { message: "Sorry, I had trouble understanding that. Could you try again?" } }, 'ai');
-             }
+            }
         }
 
     } catch (error) {
@@ -659,11 +689,11 @@ async function handleChatSend() {
 function renderLog() {
     dailyLog.innerHTML = '';
     let total = 0;
-    let totalMacros = { protein: 0, carbs: 0, fats: 0 }; 
+    let totalMacros = { protein: 0, carbs: 0, fats: 0 };
 
     const items = Object.values(dailyItems);
     emptyLogMessage.classList.toggle('hidden', items.length > 0);
-    
+
     items.forEach(item => {
         const listItem = document.createElement('li');
         listItem.className = 'p-3 bg-brand-bg dark:bg-dark-bg rounded-xl flex justify-between items-center';
@@ -703,7 +733,7 @@ function renderNutritionChart(macros) {
         const originalLabels = ['Protein', 'Carbs', 'Fats'];
         const targets = [userProfile.macroTargets.protein, userProfile.macroTargets.carbs, userProfile.macroTargets.fats];
 
-        const generateLabelsConfig = function(chart) {
+        const generateLabelsConfig = function (chart) {
             const data = chart.data;
             if (data.labels.length && data.datasets.length) {
                 const { labels: { pointStyle } } = chart.legend.options;
@@ -712,7 +742,7 @@ function renderNutritionChart(macros) {
                     const style = meta.controller.getStyle(i);
                     const current = data.datasets[0].data[i];
                     const target = targets[i];
-                    
+
                     return {
                         text: `${label}: ${current}g / ${target}g`,
                         fillStyle: style.backgroundColor,
@@ -785,11 +815,11 @@ function updateNutritionNotice(macros) {
     }
 
     if (!notice) {
-        const macroHistory = getMacroHistory(3); 
+        const macroHistory = getMacroHistory(3);
         if (macroHistory.length >= 3) {
-            const highCarbDays = macroHistory.filter(day => (day.carbs * 4) / day.totalCalories > 0.6).length; 
-            const lowProteinDays = macroHistory.filter(day => (day.protein * 4) / day.totalCalories < 0.15).length; 
-            
+            const highCarbDays = macroHistory.filter(day => (day.carbs * 4) / day.totalCalories > 0.6).length;
+            const lowProteinDays = macroHistory.filter(day => (day.protein * 4) / day.totalCalories < 0.15).length;
+
             if (highCarbDays >= 2) {
                 notice = "Reminder: Your carb intake has been high the last few days. Ensure you're getting enough protein and fats.";
             } else if (lowProteinDays >= 2) {
@@ -808,7 +838,7 @@ function updateNutritionNotice(macros) {
 
 function getMacroHistory(days) {
     const history = [];
-    for (let i = 1; i <= days; i++) { 
+    for (let i = 1; i <= days; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d).split('T')[0];
@@ -823,7 +853,7 @@ function getMacroHistory(days) {
                 dailyMacros.totalCalories += (item.calories || 0) * item.quantity;
             });
             if (dailyMacros.totalCalories > 0) {
-                 history.push(dailyMacros);
+                history.push(dailyMacros);
             }
         }
     }
@@ -842,22 +872,22 @@ async function fetchHealthDataSummary() {
         const total = Object.values(items).reduce((sum, item) => sum + (item.calories * item.quantity), 0);
         calorieHistoryText += `- ${dateString}: ${total} kcal\n`;
     }
-    
+
     const savedWeightHistory = localStorage.getItem('weightHistory');
     const weights = savedWeightHistory ? JSON.parse(savedWeightHistory) : [];
     let weightHistoryText = "Recent weight history:\n";
     weights.forEach(w => {
-        weightHistoryText += `- ${w.date}: ${w.weight} kg\n`;
+        weightHistoryText += `- ${w.date}: ${w.weight} lb\n`;
     });
-    
+
     const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : userProfile.startWeight;
 
     healthDataSummary = `
         User Profile and Goals:
         - Name: ${userProfile.name}
-        - Starting Weight: ${userProfile.startWeight} kg
-        - Current Weight: ${latestWeight} kg
-        - Goal Weight: ${userProfile.goalWeight} kg
+        - Starting Weight: ${userProfile.startWeight} lb
+        - Current Weight: ${latestWeight} lb
+        - Goal Weight: ${userProfile.goalWeight} lb
         - Daily Calorie Target: ${userProfile.calorieTarget} kcal
         
         ${calorieHistoryText}
@@ -878,7 +908,7 @@ function renderQuickReplies(replies) {
 function appendMessage(data, sender) {
     const messageWrapper = document.createElement('div');
     messageWrapper.className = 'message-bubble-wrapper flex items-start gap-3 w-full';
-    
+
     if (sender === 'user') {
         messageWrapper.classList.add('justify-end');
         messageWrapper.innerHTML = `
@@ -899,14 +929,14 @@ function appendMessage(data, sender) {
                 break;
             case 'food_log_card':
                 // This case is no longer used to display a message, but is kept for potential future use.
-                return; 
-             case 'confirmation':
+                return;
+            case 'confirmation':
                 contentHTML = `<p>${data.payload.message}</p>`;
                 break;
             default:
-                 contentHTML = `<p>Received an unknown message type.</p>`
+                contentHTML = `<p>Received an unknown message type.</p>`
         }
-        
+
         messageWrapper.innerHTML = `
             <div class="ai-message-bubble bg-brand-secondary dark:bg-dark-secondary p-4 rounded-2xl rounded-bl-none max-w-xs md:max-w-md message-bubble">
                 ${contentHTML}
@@ -915,5 +945,161 @@ function appendMessage(data, sender) {
     }
     chatContainer.appendChild(messageWrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// --- AUTHENTICATION LOGIC ---
+let firebaseApp, auth, firestore;
+let currentUser = null;
+
+async function initAuthAndApp() {
+    try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebaseApp = firebase.initializeApp(config);
+        } else {
+            firebaseApp = firebase.app();
+        }
+
+        auth = firebase.auth();
+
+        const authOverlay = document.getElementById('auth-overlay');
+        const authForm = document.getElementById('auth-form');
+        const authEmail = document.getElementById('auth-email');
+        const authPassword = document.getElementById('auth-password');
+        const authLoginBtn = document.getElementById('auth-login-btn');
+        const authRegisterBtn = document.getElementById('auth-register-btn');
+        const authGoogleBtn = document.getElementById('auth-google-btn');
+        const errorMsg = document.getElementById('auth-error-msg');
+        const loadingMsg = document.getElementById('auth-loading-msg');
+        const optInCheck = document.getElementById('auth-opt-in');
+
+        const showError = (msg) => {
+            errorMsg.textContent = msg;
+            errorMsg.classList.remove('hidden');
+            loadingMsg.classList.add('hidden');
+        };
+
+        const showLoading = (msg) => {
+            loadingMsg.textContent = msg || 'Processing...';
+            loadingMsg.classList.remove('hidden');
+            errorMsg.classList.add('hidden');
+        };
+
+        const hideMessages = () => {
+            errorMsg.classList.add('hidden');
+            loadingMsg.classList.add('hidden');
+        };
+
+        // Listen for Auth state changes
+        auth.onAuthStateChanged(user => {
+            const localAuthCloseBtn = document.getElementById('auth-close-btn');
+            if (user) {
+                currentUser = user;
+                authOverlay.classList.add('opacity-0');
+                authOverlay.style.opacity = '0';
+                setTimeout(() => authOverlay.classList.add('hidden'), 500);
+                if (headerAuthBtn) headerAuthBtn.textContent = 'Logout';
+                initializeAppData();
+            } else {
+                currentUser = null;
+                if (headerAuthBtn) headerAuthBtn.textContent = 'Login';
+
+                let firstUseDate = localStorage.getItem('firstUseDate');
+                if (!firstUseDate) {
+                    firstUseDate = getTodaysDateEDT();
+                    localStorage.setItem('firstUseDate', firstUseDate);
+                }
+
+                const today = new Date(getTodaysDateEDT());
+                const firstUse = new Date(firstUseDate);
+                const diffTime = Math.abs(today - firstUse);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays >= 3) {
+                    // Trial expired, force login
+                    authOverlay.classList.remove('hidden');
+                    if (localAuthCloseBtn) localAuthCloseBtn.classList.add('hidden');
+                    setTimeout(() => {
+                        authOverlay.classList.remove('opacity-0');
+                        authOverlay.style.opacity = '1';
+                    }, 10);
+                } else {
+                    // Still in trial
+                    authOverlay.classList.add('opacity-0');
+                    authOverlay.style.opacity = '0';
+                    setTimeout(() => authOverlay.classList.add('hidden'), 500);
+                    initializeAppData();
+                }
+            }
+        });
+
+        // Email Login
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+            showLoading('Logging in...');
+            try {
+                await auth.signInWithEmailAndPassword(authEmail.value, authPassword.value);
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        // Email Register
+        authRegisterBtn.addEventListener('click', async () => {
+            if (!authEmail.value || !authPassword.value) {
+                showError('Please enter email and password to register.');
+                return;
+            }
+            hideMessages();
+            showLoading('Registering...');
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(authEmail.value, authPassword.value);
+
+                // Call our server to trigger welcome email and save to Google Sheets
+                await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: cred.user.email,
+                        name: cred.user.displayName || 'New User',
+                        optIn: optInCheck.checked
+                    })
+                });
+
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        // Google Sign In
+        authGoogleBtn.addEventListener('click', async () => {
+            hideMessages();
+            showLoading('Connecting to Google...');
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                const result = await auth.signInWithPopup(provider);
+                if (result.additionalUserInfo?.isNewUser) {
+                    await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: result.user.email,
+                            name: result.user.displayName,
+                            optIn: optInCheck.checked
+                        })
+                    });
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+    } catch (e) {
+        console.error("Failed to load Firebase config", e);
+    }
 }
 
