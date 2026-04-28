@@ -158,6 +158,10 @@ function handleThemeToggle() {
 function initializeAppData() {
     mainContainer.classList.remove('hidden');
 
+    // Reset chat state on initialization (fixes duplicate welcome messages on re-login)
+    chatContainer.innerHTML = '';
+    chatHistory = [];
+
     if (document.documentElement.classList.contains('dark')) {
         themeToggleSwitch.checked = true;
     }
