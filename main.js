@@ -10,17 +10,26 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder, macroHistoryChartEl,
     headerAuthBtn, authCloseBtn; // New elements
 
-const userProfile = {
+let userProfile = {
     name: 'User',
-    startWeight: 193,
-    goalWeight: 167,
-    calorieTarget: 1850,
+    startWeight: 0,
+    goalWeight: 0,
+    calorieTarget: 0,
     macroTargets: {
-        protein: 139,
-        carbs: 185,
-        fats: 62
+        protein: 0,
+        carbs: 0,
+        fats: 0
     }
 };
+
+function loadUserProfile() {
+    const saved = localStorage.getItem('userProfile');
+    if (saved) {
+        userProfile = JSON.parse(saved);
+        return true;
+    }
+    return false;
+}
 
 const achievements = [
     { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
@@ -1002,11 +1011,52 @@ async function initAuthAndApp() {
             const localAuthCloseBtn = document.getElementById('auth-close-btn');
             if (user) {
                 currentUser = user;
+
+                // Block access until email is verified
+                if (!user.emailVerified) {
+                    showError('Please verify your email address. A verification link has been sent to your inbox. Check your spam folder if you don\'t see it.');
+                    loadingMsg.classList.add('hidden');
+                    
+                    let refreshBtn = document.getElementById('auth-refresh-btn');
+                    if (!refreshBtn) {
+                        refreshBtn = document.createElement('button');
+                        refreshBtn.id = 'auth-refresh-btn';
+                        refreshBtn.type = 'button';
+                        refreshBtn.className = 'w-full bg-brand-secondary hover:bg-brand-primary text-white font-bold py-3 rounded-xl mt-4 transition-colors';
+                        refreshBtn.textContent = 'I clicked the link - Refresh';
+                        refreshBtn.onclick = async () => {
+                            await auth.currentUser.reload();
+                            if (auth.currentUser.emailVerified) {
+                                // Force re-evaluation of auth state
+                                auth.updateCurrentUser(auth.currentUser);
+                            } else {
+                                showError('Email still not verified. Please check your inbox.');
+                            }
+                        };
+                        authForm.appendChild(refreshBtn);
+                    }
+                    refreshBtn.classList.remove('hidden');
+                    return; // Stop initialization
+                }
+
+                const refreshBtn = document.getElementById('auth-refresh-btn');
+                if (refreshBtn) refreshBtn.classList.add('hidden');
+
                 authOverlay.classList.add('opacity-0');
                 authOverlay.style.opacity = '0';
                 setTimeout(() => authOverlay.classList.add('hidden'), 500);
                 if (headerAuthBtn) headerAuthBtn.textContent = 'Logout';
-                initializeAppData();
+                
+                if (loadUserProfile() && userProfile.startWeight > 0) {
+                    initializeAppData();
+                } else {
+                    const onboardingOverlay = document.getElementById('onboarding-overlay');
+                    onboardingOverlay.classList.remove('hidden');
+                    setTimeout(() => {
+                        onboardingOverlay.classList.remove('opacity-0');
+                        onboardingOverlay.style.opacity = '1';
+                    }, 10);
+                }
             } else {
                 currentUser = null;
                 if (headerAuthBtn) headerAuthBtn.textContent = 'Login';
@@ -1031,11 +1081,22 @@ async function initAuthAndApp() {
                         authOverlay.style.opacity = '1';
                     }, 10);
                 } else {
-                    // Still in trial
+                    // Still in trial — hide auth overlay
                     authOverlay.classList.add('opacity-0');
                     authOverlay.style.opacity = '0';
                     setTimeout(() => authOverlay.classList.add('hidden'), 500);
-                    initializeAppData();
+
+                    // First visit ever: no profile yet — show onboarding before the app
+                    if (!loadUserProfile() || userProfile.startWeight === 0) {
+                        const onboardingOverlay = document.getElementById('onboarding-overlay');
+                        onboardingOverlay.classList.remove('hidden');
+                        setTimeout(() => {
+                            onboardingOverlay.classList.remove('opacity-0');
+                            onboardingOverlay.style.opacity = '1';
+                        }, 10);
+                    } else {
+                        initializeAppData();
+                    }
                 }
             }
         });
@@ -1048,20 +1109,38 @@ async function initAuthAndApp() {
             try {
                 await auth.signInWithEmailAndPassword(authEmail.value, authPassword.value);
             } catch (error) {
-                showError(error.message);
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    showError("No account found with this email, or incorrect password. Please register first.");
+                } else {
+                    showError(error.message);
+                }
             }
         });
 
         // Email Register
         authRegisterBtn.addEventListener('click', async () => {
-            if (!authEmail.value || !authPassword.value) {
+            const emailValue = authEmail.value.trim();
+            const passwordValue = authPassword.value;
+
+            if (!emailValue || !passwordValue) {
                 showError('Please enter email and password to register.');
                 return;
             }
+
+            // Client-side regex for strict validation
+            const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+            if (!emailRegex.test(emailValue)) {
+                showError('Please enter a valid email address.');
+                return;
+            }
+
             hideMessages();
             showLoading('Registering...');
             try {
-                const cred = await auth.createUserWithEmailAndPassword(authEmail.value, authPassword.value);
+                const cred = await auth.createUserWithEmailAndPassword(emailValue, passwordValue);
+
+                // Trigger standard Firebase Email Verification
+                await cred.user.sendEmailVerification();
 
                 // Call our server to trigger welcome email and save to Google Sheets
                 await fetch('/api/register', {
@@ -1101,6 +1180,83 @@ async function initAuthAndApp() {
                 showError(error.message);
             }
         });
+
+        // Onboarding Form Submit
+        const onboardingForm = document.getElementById('onboarding-form');
+        const onboardErrorMsg = document.getElementById('onboard-error-msg');
+        if (onboardingForm) {
+            onboardingForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const age = parseInt(document.getElementById('onboard-age').value);
+                const sex = document.getElementById('onboard-sex').value;
+                const heightFt = parseInt(document.getElementById('onboard-height-ft').value);
+                const heightIn = parseInt(document.getElementById('onboard-height-in').value);
+                const weight = parseFloat(document.getElementById('onboard-weight').value);
+                const goalWeight = parseFloat(document.getElementById('onboard-goal-weight').value);
+
+                if (!age || !sex || isNaN(heightFt) || isNaN(heightIn) || !weight || !goalWeight) {
+                    onboardErrorMsg.textContent = "Please fill out all fields.";
+                    onboardErrorMsg.classList.remove('hidden');
+                    return;
+                }
+                
+                // Calculate Height in cm
+                const totalInches = (heightFt * 12) + heightIn;
+                const heightCm = totalInches * 2.54;
+                const weightKg = weight * 0.453592;
+
+                // Mifflin-St Jeor Equation for BMR
+                let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+                if (sex === 'male') {
+                    bmr += 5;
+                } else {
+                    bmr -= 161;
+                }
+
+                // TDEE estimate (Lightly active multiplier ~1.2)
+                const tdee = bmr * 1.2;
+
+                // Calculate Calorie Target (-500 for weight loss, +250 for gain)
+                let targetCalories = Math.round(tdee);
+                if (goalWeight < weight) {
+                    targetCalories -= 500;
+                } else if (goalWeight > weight) {
+                    targetCalories += 250;
+                }
+
+                // Minimum calorie safety floor
+                const minCalories = sex === 'male' ? 1500 : 1200;
+                targetCalories = Math.max(targetCalories, minCalories);
+
+                userProfile = {
+                    name: auth.currentUser?.displayName || 'User',
+                    startWeight: weight,
+                    goalWeight: goalWeight,
+                    calorieTarget: targetCalories,
+                    macroTargets: {
+                        protein: Math.round(weight * 0.8), // 0.8g per lb
+                        fats: Math.round(weight * 0.35),   // 0.35g per lb
+                        carbs: Math.max(0, Math.round((targetCalories - (Math.round(weight*0.8)*4) - (Math.round(weight*0.35)*9)) / 4))
+                    }
+                };
+
+                localStorage.setItem('userProfile', JSON.stringify(userProfile));
+                
+                // Seed initial weight in history if empty
+                if (weightHistoryData.length === 0) {
+                    weightHistoryData.push({ date: getTodaysDateEDT(), weight: weight });
+                    saveData('weightHistory', weightHistoryData);
+                }
+
+                // Hide Onboarding Overlay
+                const onboardingOverlay = document.getElementById('onboarding-overlay');
+                onboardingOverlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    onboardingOverlay.classList.add('hidden');
+                    initializeAppData();
+                }, 500);
+            });
+        }
 
     } catch (e) {
         console.error("Failed to load Firebase config", e);
