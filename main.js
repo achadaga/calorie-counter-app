@@ -1002,6 +1002,37 @@ async function initAuthAndApp() {
             const localAuthCloseBtn = document.getElementById('auth-close-btn');
             if (user) {
                 currentUser = user;
+
+                // Block access until email is verified
+                if (!user.emailVerified) {
+                    showError('Please verify your email address. A verification link has been sent to your inbox. Check your spam folder if you don\'t see it.');
+                    loadingMsg.classList.add('hidden');
+                    
+                    let refreshBtn = document.getElementById('auth-refresh-btn');
+                    if (!refreshBtn) {
+                        refreshBtn = document.createElement('button');
+                        refreshBtn.id = 'auth-refresh-btn';
+                        refreshBtn.type = 'button';
+                        refreshBtn.className = 'w-full bg-brand-secondary hover:bg-brand-primary text-white font-bold py-3 rounded-xl mt-4 transition-colors';
+                        refreshBtn.textContent = 'I clicked the link - Refresh';
+                        refreshBtn.onclick = async () => {
+                            await auth.currentUser.reload();
+                            if (auth.currentUser.emailVerified) {
+                                // Force re-evaluation of auth state
+                                auth.updateCurrentUser(auth.currentUser);
+                            } else {
+                                showError('Email still not verified. Please check your inbox.');
+                            }
+                        };
+                        authForm.appendChild(refreshBtn);
+                    }
+                    refreshBtn.classList.remove('hidden');
+                    return; // Stop initialization
+                }
+
+                const refreshBtn = document.getElementById('auth-refresh-btn');
+                if (refreshBtn) refreshBtn.classList.add('hidden');
+
                 authOverlay.classList.add('opacity-0');
                 authOverlay.style.opacity = '0';
                 setTimeout(() => authOverlay.classList.add('hidden'), 500);
@@ -1054,14 +1085,28 @@ async function initAuthAndApp() {
 
         // Email Register
         authRegisterBtn.addEventListener('click', async () => {
-            if (!authEmail.value || !authPassword.value) {
+            const emailValue = authEmail.value.trim();
+            const passwordValue = authPassword.value;
+
+            if (!emailValue || !passwordValue) {
                 showError('Please enter email and password to register.');
                 return;
             }
+
+            // Client-side regex for strict validation
+            const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+            if (!emailRegex.test(emailValue)) {
+                showError('Please enter a valid email address.');
+                return;
+            }
+
             hideMessages();
             showLoading('Registering...');
             try {
-                const cred = await auth.createUserWithEmailAndPassword(authEmail.value, authPassword.value);
+                const cred = await auth.createUserWithEmailAndPassword(emailValue, passwordValue);
+
+                // Trigger standard Firebase Email Verification
+                await cred.user.sendEmailVerification();
 
                 // Call our server to trigger welcome email and save to Google Sheets
                 await fetch('/api/register', {
