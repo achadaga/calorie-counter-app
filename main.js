@@ -10,17 +10,26 @@ let mainContainer, dailyLog, totalCaloriesSpan,
     nutritionChartEl, nutritionNoticeEl, nutritionChartPlaceholder, macroHistoryChartEl,
     headerAuthBtn, authCloseBtn; // New elements
 
-const userProfile = {
+let userProfile = {
     name: 'User',
-    startWeight: 193,
-    goalWeight: 167,
-    calorieTarget: 1850,
+    startWeight: 0,
+    goalWeight: 0,
+    calorieTarget: 0,
     macroTargets: {
-        protein: 139,
-        carbs: 185,
-        fats: 62
+        protein: 0,
+        carbs: 0,
+        fats: 0
     }
 };
+
+function loadUserProfile() {
+    const saved = localStorage.getItem('userProfile');
+    if (saved) {
+        userProfile = JSON.parse(saved);
+        return true;
+    }
+    return false;
+}
 
 const achievements = [
     { id: 'log1', name: 'First Log', icon: '📝', condition: () => Object.keys(localStorage).some(k => k.startsWith('log_')) },
@@ -1037,7 +1046,17 @@ async function initAuthAndApp() {
                 authOverlay.style.opacity = '0';
                 setTimeout(() => authOverlay.classList.add('hidden'), 500);
                 if (headerAuthBtn) headerAuthBtn.textContent = 'Logout';
-                initializeAppData();
+                
+                if (loadUserProfile() && userProfile.startWeight > 0) {
+                    initializeAppData();
+                } else {
+                    const onboardingOverlay = document.getElementById('onboarding-overlay');
+                    onboardingOverlay.classList.remove('hidden');
+                    setTimeout(() => {
+                        onboardingOverlay.classList.remove('opacity-0');
+                        onboardingOverlay.style.opacity = '1';
+                    }, 10);
+                }
             } else {
                 currentUser = null;
                 if (headerAuthBtn) headerAuthBtn.textContent = 'Login';
@@ -1150,6 +1169,83 @@ async function initAuthAndApp() {
                 showError(error.message);
             }
         });
+
+        // Onboarding Form Submit
+        const onboardingForm = document.getElementById('onboarding-form');
+        const onboardErrorMsg = document.getElementById('onboard-error-msg');
+        if (onboardingForm) {
+            onboardingForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const age = parseInt(document.getElementById('onboard-age').value);
+                const sex = document.getElementById('onboard-sex').value;
+                const heightFt = parseInt(document.getElementById('onboard-height-ft').value);
+                const heightIn = parseInt(document.getElementById('onboard-height-in').value);
+                const weight = parseFloat(document.getElementById('onboard-weight').value);
+                const goalWeight = parseFloat(document.getElementById('onboard-goal-weight').value);
+
+                if (!age || !sex || isNaN(heightFt) || isNaN(heightIn) || !weight || !goalWeight) {
+                    onboardErrorMsg.textContent = "Please fill out all fields.";
+                    onboardErrorMsg.classList.remove('hidden');
+                    return;
+                }
+                
+                // Calculate Height in cm
+                const totalInches = (heightFt * 12) + heightIn;
+                const heightCm = totalInches * 2.54;
+                const weightKg = weight * 0.453592;
+
+                // Mifflin-St Jeor Equation for BMR
+                let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+                if (sex === 'male') {
+                    bmr += 5;
+                } else {
+                    bmr -= 161;
+                }
+
+                // TDEE estimate (Lightly active multiplier ~1.2)
+                const tdee = bmr * 1.2;
+
+                // Calculate Calorie Target (-500 for weight loss, +250 for gain)
+                let targetCalories = Math.round(tdee);
+                if (goalWeight < weight) {
+                    targetCalories -= 500;
+                } else if (goalWeight > weight) {
+                    targetCalories += 250;
+                }
+
+                // Minimum calorie safety floor
+                const minCalories = sex === 'male' ? 1500 : 1200;
+                targetCalories = Math.max(targetCalories, minCalories);
+
+                userProfile = {
+                    name: auth.currentUser?.displayName || 'User',
+                    startWeight: weight,
+                    goalWeight: goalWeight,
+                    calorieTarget: targetCalories,
+                    macroTargets: {
+                        protein: Math.round(weight * 0.8), // 0.8g per lb
+                        fats: Math.round(weight * 0.35),   // 0.35g per lb
+                        carbs: Math.max(0, Math.round((targetCalories - (Math.round(weight*0.8)*4) - (Math.round(weight*0.35)*9)) / 4))
+                    }
+                };
+
+                localStorage.setItem('userProfile', JSON.stringify(userProfile));
+                
+                // Seed initial weight in history if empty
+                if (weightHistoryData.length === 0) {
+                    weightHistoryData.push({ date: getTodaysDateEDT(), weight: weight });
+                    saveData('weightHistory', weightHistoryData);
+                }
+
+                // Hide Onboarding Overlay
+                const onboardingOverlay = document.getElementById('onboarding-overlay');
+                onboardingOverlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    onboardingOverlay.classList.add('hidden');
+                    initializeAppData();
+                }, 500);
+            });
+        }
 
     } catch (e) {
         console.error("Failed to load Firebase config", e);

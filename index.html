@@ -127,6 +127,69 @@
             <p id="auth-loading-msg" class="text-brand-primary text-sm mt-4 text-center hidden">Processing...</p>
         </div>
     </div>
+
+    <!-- Onboarding Overlay -->
+    <div id="onboarding-overlay" class="fixed inset-0 bg-brand-bg/90 dark:bg-dark-bg/90 backdrop-blur-sm z-[2000] flex flex-col items-center justify-center p-6 transition-opacity duration-500 hidden opacity-0">
+        <div class="bg-brand-surface dark:bg-dark-surface p-8 rounded-3xl shadow-2xl w-full max-w-md relative overflow-y-auto max-h-screen">
+            <h1 class="text-3xl font-bold text-center mb-2 text-brand-text dark:text-dark-text">Personalize Your Journey</h1>
+            <p class="text-center text-sm text-gray-500 mb-6">Let's tailor your AI coach to your unique body profile.</p>
+
+            <form id="onboarding-form" class="space-y-5">
+                <div class="flex gap-4">
+                    <div class="w-1/2">
+                        <label class="block text-sm font-medium mb-1">Age</label>
+                        <input type="number" id="onboard-age" required min="13" max="120"
+                            class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary"
+                            placeholder="e.g. 30">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-sm font-medium mb-1">Sex</label>
+                        <select id="onboard-sex" required
+                            class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary appearance-none">
+                            <option value="" disabled selected>Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Height</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="onboard-height-ft" required min="3" max="8"
+                            class="w-1/2 p-3 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary"
+                            placeholder="Feet">
+                        <input type="number" id="onboard-height-in" required min="0" max="11"
+                            class="w-1/2 p-3 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary"
+                            placeholder="Inches">
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="w-1/2">
+                        <label class="block text-sm font-medium mb-1">Current Weight (lbs)</label>
+                        <input type="number" id="onboard-weight" required min="50" max="1000" step="0.1"
+                            class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary"
+                            placeholder="e.g. 180">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-sm font-medium mb-1">Goal Weight (lbs)</label>
+                        <input type="number" id="onboard-goal-weight" required min="50" max="1000" step="0.1"
+                            class="w-full p-3 bg-brand-bg dark:bg-dark-bg border border-brand-subtle dark:border-dark-subtle rounded-xl focus:ring-2 focus:ring-brand-primary"
+                            placeholder="e.g. 150">
+                    </div>
+                </div>
+
+                <p id="onboard-error-msg" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+
+                <button type="submit" id="onboard-submit-btn"
+                    class="w-full bg-brand-primary hover:bg-opacity-80 text-white font-bold py-4 rounded-xl mt-6 transition">
+                    Complete Setup
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div id="achievement-toast" class="achievement-toast">
         <span id="toast-icon" class="text-2xl mr-3"></span>
         <div>
