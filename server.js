@@ -6,7 +6,11 @@ require('dotenv').config();
 
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, {
+    setHeaders: (res, path) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    }
+}));
 
 // Google Sheets Auth Setup
 const getGoogleSheetsClient = async () => {
