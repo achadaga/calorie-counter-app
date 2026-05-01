@@ -1079,7 +1079,11 @@ async function initAuthAndApp() {
             try {
                 await auth.signInWithEmailAndPassword(authEmail.value, authPassword.value);
             } catch (error) {
-                showError(error.message);
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    showError("No account found with this email, or incorrect password. Please register first.");
+                } else {
+                    showError(error.message);
+                }
             }
         });
 
