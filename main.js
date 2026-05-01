@@ -1081,11 +1081,22 @@ async function initAuthAndApp() {
                         authOverlay.style.opacity = '1';
                     }, 10);
                 } else {
-                    // Still in trial
+                    // Still in trial — hide auth overlay
                     authOverlay.classList.add('opacity-0');
                     authOverlay.style.opacity = '0';
                     setTimeout(() => authOverlay.classList.add('hidden'), 500);
-                    initializeAppData();
+
+                    // First visit ever: no profile yet — show onboarding before the app
+                    if (!loadUserProfile() || userProfile.startWeight === 0) {
+                        const onboardingOverlay = document.getElementById('onboarding-overlay');
+                        onboardingOverlay.classList.remove('hidden');
+                        setTimeout(() => {
+                            onboardingOverlay.classList.remove('opacity-0');
+                            onboardingOverlay.style.opacity = '1';
+                        }, 10);
+                    } else {
+                        initializeAppData();
+                    }
                 }
             }
         });
